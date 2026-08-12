@@ -14,22 +14,7 @@ namespace FieldKit
         };
         private void RenderEspFrame()
         {
-            if (_lastRenderFrame == Time.frameCount)
-                return;
-
-            long perfStarted = PerfTimestamp();
-            try
-            {
-                RenderEspFrameCore();
-            }
-            finally
-            {
-                RecordPerf(
-                    perfStarted,
-                    ref _perfEspTicks,
-                    ref _perfEspCalls,
-                    ref _perfEspMaxTicks);
-            }
+            RenderEspFrameCore();
         }
 
         private void RenderEspFrameCore()
@@ -39,7 +24,9 @@ namespace FieldKit
 
             _lastRenderFrame = Time.frameCount;
 
-            if (!_enabled.Value ||
+            bool renderCharacters = _enabled.Value;
+            bool renderQuestOverlay = IsQuestOverlayEnabled();
+            if ((!renderCharacters && !renderQuestOverlay) ||
                 _world == null ||
                 _localPlayer == null)
             {
@@ -66,6 +53,11 @@ namespace FieldKit
                 }
             }
 
+            // Keep the overlay on the same display as the projection camera.
+            // This is part of the upstream 1.4.0 viewport projection path.
+            if (_canvas.targetDisplay != _camera.targetDisplay)
+                _canvas.targetDisplay = _camera.targetDisplay;
+
             _boxes.Clear();
             _lines.Clear();
             _filledPolygons.Clear();
@@ -73,91 +65,93 @@ namespace FieldKit
             Vector3 localPosition = _localPlayer.Transform.position;
             float maxDistanceSq = _maxDistance.Value * _maxDistance.Value;
             int labelIndex = 0;
-            Rect scopeMask;
-            bool hasScopeMask = TryGetActiveScopeMask(out scopeMask);
+            Rect scopeMask = default(Rect);
+            bool hasScopeMask =
+                renderCharacters &&
+                _scopeEsp.Value &&
+                TryGetActiveScopeMask(out scopeMask);
 
-            for (int i = 0; i < _targets.Count; i++)
+            if (renderCharacters)
             {
-                Target target = _targets[i];
-                Player player = target.Player;
-
-                if (player == null ||
-                    !target.IsAlive ||
-                    !ShouldShow(target))
-                    continue;
-
-                if (!target.IsOnMainScreen)
+                for (int i = 0; i < _targets.Count; i++)
                 {
-                    target.HasSmoothedScreenRect = false;
-                    continue;
-                }
+                    Target target = _targets[i];
+                    Player player = target.Player;
 
-                Transform root = target.Root;
-                if (root == null)
-                    continue;
-                Vector3 position = root.position;
-                float distanceSq = (position - localPosition).sqrMagnitude;
+                    if (player == null ||
+                        !target.IsAlive ||
+                        !ShouldShow(target))
+                        continue;
 
-                if (distanceSq > maxDistanceSq)
-                    continue;
+                    if (!target.IsOnMainScreen)
+                    {
+                        target.HasSmoothedScreenRect = false;
+                        continue;
+                    }
 
-                Rect rect;
+                    Transform root = target.Root;
+                    if (root == null)
+                        continue;
+                    Vector3 position = root.position;
+                    float distanceSq =
+                        (position - localPosition).sqrMagnitude;
 
-                if (!TryGetScreenRect(target, out rect))
-                {
-                    target.HasSmoothedScreenRect = false;
-                    continue;
-                }
+                    if (distanceSq > maxDistanceSq)
+                        continue;
 
-                rect = StabilizeReturningScreenRect(target, rect);
-                if (hasScopeMask &&
-                    IsInsideEllipse(rect.center, scopeMask) &&
-                    HasValidScopeProjection(target))
-                    continue;
+                    Rect rect;
 
-                target.ScreenLayerFade = GetTargetScreenLayerFade(
-                    target, rect, distanceSq, localPosition);
-                Color layeredColor = ApplyScreenLayerFade(
-                    target.DisplayColor,
-                    target.ScreenLayerFade);
-                if (_showBoxes.Value)
-                    _boxes.Add(new BoxCommand(rect, layeredColor));
-                AddHealthBar(
-                    rect,
-                    target.HealthRatio,
-                    _lines,
-                    target.ScreenLayerFade);
+                    if (!TryGetScreenRect(target, out rect))
+                    {
+                        target.HasSmoothedScreenRect = false;
+                        continue;
+                    }
 
-                if (_showBones.Value || _showAimLines.Value)
-                    AddBoneEsp(target, rect.height);
+                    rect = StabilizeReturningScreenRect(target, rect);
+                    if (hasScopeMask &&
+                        IsInsideEllipse(rect.center, scopeMask) &&
+                        HasValidScopeProjection(target))
+                        continue;
 
-                Text label = GetLabel(labelIndex++);
-                RectTransform labelRect = (RectTransform)label.transform;
+                    target.ScreenLayerFade = GetTargetScreenLayerFade(
+                        target, rect, distanceSq, localPosition);
+                    Color layeredColor = ApplyScreenLayerFade(
+                        target.DisplayColor,
+                        target.ScreenLayerFade);
+                    if (_showBoxes.Value)
+                        _boxes.Add(new BoxCommand(rect, layeredColor));
+                    if (_showHealthBar.Value)
+                    {
+                        AddHealthBar(
+                            rect,
+                            target.HealthRatio,
+                            _lines,
+                            target.ScreenLayerFade);
+                    }
 
-                if (Time.unscaledTime >= target.NextTextUpdate)
-                {
-                    target.CachedText = FormatTargetEspText(
+                    string targetText = GetTargetEspText(
                         target,
                         Mathf.Sqrt(distanceSq));
+                    if (!string.IsNullOrEmpty(targetText))
+                    {
+                        Text label = GetLabel(labelIndex++);
+                        RectTransform labelRect =
+                            (RectTransform)label.transform;
 
-                    target.NextTextUpdate = Time.unscaledTime + 0.2f;
+                        label.text = targetText;
+                        label.color = layeredColor;
+                        label.fontSize = _fontSize.Value;
+                        labelRect.pivot = new Vector2(0.5f, 0f);
+                        labelRect.anchoredPosition =
+                            new Vector2(rect.center.x, rect.yMax + 3f);
+                        label.gameObject.SetActive(true);
+                    }
                 }
-
-                label.text = target.CachedText;
-                label.color = layeredColor;
-                label.fontSize = _fontSize.Value;
-                labelRect.pivot = new Vector2(0.5f, 0f);
-                labelRect.anchoredPosition =
-                    new Vector2(rect.center.x, rect.yMax + 3f);
-                label.gameObject.SetActive(true);
             }
 
-            AppendLootEsp(
+            AppendQuestHighlights(
                 localPosition,
-                scopeMask,
-                hasScopeMask,
                 ref labelIndex);
-            AppendExtractionEsp(localPosition, ref labelIndex);
 
             for (int i = labelIndex; i < _labels.Count; i++)
                 _labels[i].gameObject.SetActive(false);
@@ -175,7 +169,10 @@ namespace FieldKit
                 _scopeOverlays.Count != 0;
             for (int i = 0; i < _targets.Count; i++)
                 _targets[i].ScreenLayerFade = 1f;
-            RenderScopeOverlays(localPosition, maxDistanceSq);
+            if (renderCharacters && _scopeEsp.Value)
+                RenderScopeOverlays(localPosition, maxDistanceSq);
+            else if (_scopeOverlays.Count != 0)
+                DestroyScopeOverlays();
         }
 
         private static Rect StabilizeReturningScreenRect(
@@ -361,26 +358,22 @@ namespace FieldKit
             if (!EnsureBones(target))
                 return false;
 
-            Rect screenRect;
-            if (!TryGetCharacterScreenRect(target, camera, out screenRect))
+            Vector2 head;
+            Vector2 feet;
+            if (!TryGetCharacterCanvasPoints(
+                    target,
+                    camera,
+                    canvasRect,
+                    out head,
+                    out feet))
                 return false;
 
-            Vector2 localMin;
-            Vector2 localMax;
-
-            if (!TryScreenPointToCanvas(
-                    canvasRect, screenRect.min, out localMin) ||
-                !TryScreenPointToCanvas(
-                    canvasRect, screenRect.max, out localMax))
-                return false;
-
-            rect = Rect.MinMaxRect(
-                localMin.x - 2f,
-                localMin.y - 2f,
-                localMax.x + 2f,
-                localMax.y + 2f);
-
-            return true;
+            return TryBuildCharacterRect(
+                target,
+                head,
+                feet,
+                2f,
+                out rect);
         }
 
         private bool TryGetScopeScreenRect(
@@ -393,63 +386,109 @@ namespace FieldKit
             if (camera == null || !EnsureBones(target))
                 return false;
 
-            Rect screenRect;
-            if (!TryGetCharacterScreenRect(target, camera, out screenRect))
+            Vector2 head;
+            Vector2 feet;
+            if (!TryGetCharacterCameraPixelPoints(
+                    target,
+                    camera,
+                    out head,
+                    out feet))
                 return false;
 
-            rect = Rect.MinMaxRect(
-                screenRect.xMin - 2f,
-                screenRect.yMin - 2f,
-                screenRect.xMax + 2f,
-                screenRect.yMax + 2f);
-            return true;
+            return TryBuildCharacterRect(
+                target,
+                head,
+                feet,
+                2f,
+                out rect);
         }
 
-        private static bool TryGetCharacterScreenRect(
+        private static bool TryGetCharacterCanvasPoints(
             Target target,
             Camera camera,
+            RectTransform canvasRect,
+            out Vector2 head,
+            out Vector2 feet)
+        {
+            head = default(Vector2);
+            feet = default(Vector2);
+            return TryWorldPointToCanvas(
+                       camera,
+                       canvasRect,
+                       target.Head.position + Vector3.up * 0.15f,
+                       out head) &&
+                   TryWorldPointToCanvas(
+                       camera,
+                       canvasRect,
+                       (target.LeftFoot.position +
+                        target.RightFoot.position) * 0.5f -
+                       Vector3.up * 0.05f,
+                       out feet);
+        }
+
+        private static bool TryGetCharacterCameraPixelPoints(
+            Target target,
+            Camera camera,
+            out Vector2 head,
+            out Vector2 feet)
+        {
+            head = default(Vector2);
+            feet = default(Vector2);
+            return TryWorldPointToCameraPixels(
+                       camera,
+                       target.Head.position + Vector3.up * 0.15f,
+                       out head) &&
+                   TryWorldPointToCameraPixels(
+                       camera,
+                       (target.LeftFoot.position +
+                        target.RightFoot.position) * 0.5f -
+                       Vector3.up * 0.05f,
+                       out feet);
+        }
+
+        private static bool TryBuildCharacterRect(
+            Target target,
+            Vector2 head,
+            Vector2 feet,
+            float padding,
             out Rect rect)
         {
             rect = default(Rect);
-            Vector3 head = camera.WorldToScreenPoint(
-                target.Head.position + Vector3.up * 0.15f);
-            Vector3 feet = camera.WorldToScreenPoint(
-                (target.LeftFoot.position + target.RightFoot.position) * 0.5f -
-                Vector3.up * 0.05f);
-
-            if (head.z <= 0f || feet.z <= 0f)
-                return false;
-
             float standingHeight = Mathf.Abs(head.y - feet.y);
             Vector3 bodySpan =
                 target.Head.position -
                 (target.LeftFoot.position + target.RightFoot.position) * 0.5f;
             float horizontalSpan = new Vector2(bodySpan.x, bodySpan.z).magnitude;
-            if (standingHeight >= 3f &&
-                Mathf.Abs(bodySpan.y) >= horizontalSpan * 0.75f)
+            if (float.IsNaN(standingHeight) ||
+                float.IsInfinity(standingHeight))
+                return false;
+
+            if (Mathf.Abs(bodySpan.y) >= horizontalSpan * 0.75f)
             {
                 float centerX = (head.x + feet.x) * 0.5f;
-                float halfWidth = standingHeight * 0.22f;
+                float centerY = (head.y + feet.y) * 0.5f;
+                float visualHeight = Mathf.Max(2f, standingHeight);
+                float halfWidth = Mathf.Max(1.5f, visualHeight * 0.22f);
                 rect = Rect.MinMaxRect(
-                    centerX - halfWidth,
-                    Mathf.Min(head.y, feet.y),
-                    centerX + halfWidth,
-                    Mathf.Max(head.y, feet.y));
+                    centerX - halfWidth - padding,
+                    centerY - visualHeight * 0.5f - padding,
+                    centerX + halfWidth + padding,
+                    centerY + visualHeight * 0.5f + padding);
                 return true;
             }
 
-            Vector2 headPoint = new Vector2(head.x, head.y);
-            Vector2 feetPoint = new Vector2(feet.x, feet.y);
-            float bodyLength = Vector2.Distance(headPoint, feetPoint);
-            if (bodyLength < 3f)
+            float bodyLength = Vector2.Distance(head, feet);
+            if (float.IsNaN(bodyLength) ||
+                float.IsInfinity(bodyLength) ||
+                bodyLength < 0.05f)
                 return false;
 
             float halfThickness = Mathf.Max(2f, bodyLength * 0.22f);
             rect = Rect.MinMaxRect(
-                Mathf.Min(head.x, feet.x) - halfThickness,
-                Mathf.Min(head.y, feet.y) - halfThickness,
-                Mathf.Max(head.x, feet.x) + halfThickness,
-                Mathf.Max(head.y, feet.y) + halfThickness);
+                Mathf.Min(head.x, feet.x) - halfThickness - padding,
+                Mathf.Min(head.y, feet.y) - halfThickness - padding,
+                Mathf.Max(head.x, feet.x) + halfThickness + padding,
+                Mathf.Max(head.y, feet.y) + halfThickness + padding);
             return true;
         }
 
@@ -620,320 +659,16 @@ namespace FieldKit
             return null;
         }
 
-        private void AddBoneEsp(Target target, float projectedHeight)
-        {
-            _useScopeSkeletonColor = false;
-            _currentSkeletonThickness =
-                GetModelScaledSkeletonThickness(projectedHeight);
-            AddBoneEsp(target, _camera, _canvasRect, _lines);
-        }
 
-        private float GetModelScaledSkeletonThickness(
-            float projectedHeight)
-        {
-            float modelScale = Mathf.Clamp(
-                projectedHeight / 220f,
-                0.2f,
-                1.25f);
-            return Mathf.Max(
-                0.35f,
-                _boneThickness.Value * modelScale);
-        }
 
-        private void AddBoneEsp(
-            Target target,
-            Camera camera,
-            RectTransform canvasRect,
-            List<LineCommand> lines)
-        {
-            if (_showBones.Value)
-            {
-            AddBoneLine(target.Head, target.Neck, BoneColor(target, BoneVisibility.Neck),
-                camera, canvasRect, lines);
-            AddBoneLine(target.Neck, target.Chest, BoneColor(target, BoneVisibility.Chest),
-                camera, canvasRect, lines);
-            AddBoneLine(target.Chest, target.Pelvis, BoneColor(target, BoneVisibility.Pelvis),
-                camera, canvasRect, lines);
 
-            AddBoneLine(target.Chest, target.LeftShoulder, BoneColor(target, BoneVisibility.LeftShoulder),
-                camera, canvasRect, lines);
-            AddBoneLine(target.LeftShoulder, target.LeftElbow, BoneColor(target, BoneVisibility.LeftElbow),
-                camera, canvasRect, lines);
-            AddBoneLine(target.LeftElbow, target.LeftHand, BoneColor(target, BoneVisibility.LeftHand),
-                camera, canvasRect, lines);
 
-            AddBoneLine(target.Chest, target.RightShoulder, BoneColor(target, BoneVisibility.RightShoulder),
-                camera, canvasRect, lines);
-            AddBoneLine(target.RightShoulder, target.RightElbow, BoneColor(target, BoneVisibility.RightElbow),
-                camera, canvasRect, lines);
-            AddBoneLine(target.RightElbow, target.RightHand, BoneColor(target, BoneVisibility.RightHand),
-                camera, canvasRect, lines);
 
-            AddBoneLine(target.Pelvis, target.LeftHip, BoneColor(target, BoneVisibility.LeftHip),
-                camera, canvasRect, lines);
-            AddBoneLine(target.LeftHip, target.LeftKnee, BoneColor(target, BoneVisibility.LeftKnee),
-                camera, canvasRect, lines);
-            AddBoneLine(target.LeftKnee, target.LeftCalf, BoneColor(target, BoneVisibility.LeftKnee),
-                camera, canvasRect, lines);
-            AddBoneLine(target.LeftCalf, target.LeftFoot, BoneColor(target, BoneVisibility.LeftFoot),
-                camera, canvasRect, lines);
 
-            AddBoneLine(target.Pelvis, target.RightHip, BoneColor(target, BoneVisibility.RightHip),
-                camera, canvasRect, lines);
-            AddBoneLine(target.RightHip, target.RightKnee, BoneColor(target, BoneVisibility.RightKnee),
-                camera, canvasRect, lines);
-            AddBoneLine(target.RightKnee, target.RightCalf, BoneColor(target, BoneVisibility.RightKnee),
-                camera, canvasRect, lines);
-            AddBoneLine(target.RightCalf, target.RightFoot, BoneColor(target, BoneVisibility.RightFoot),
-                camera, canvasRect, lines);
-            AddHeadCircle(
-                target,
-                camera,
-                canvasRect,
-                lines,
-                BoneColor(target, BoneVisibility.Head));
-            }
 
-            Vector3 direction = target.Player.LookDirection;
 
-            if (_showAimLines.Value &&
-                target.Head != null &&
-                direction.sqrMagnitude > 0.001f)
-            {
-                AddWorldLine(
-                    target.Head.position,
-                    target.Head.position + direction.normalized * 2f,
-                    Color.white, camera, canvasRect, lines,
-                    _aimLineThickness.Value);
-            }
-        }
 
-        private void AddBoneLine(
-            Transform start,
-            Transform end,
-            Color color,
-            Camera camera,
-            RectTransform canvasRect,
-            List<LineCommand> lines)
-        {
-            if (start != null && end != null)
-                AddWorldLine(
-                    start.position, end.position, color,
-                    camera, canvasRect, lines,
-                    _currentSkeletonThickness);
-        }
 
-        private static void AddWorldLine(
-            Vector3 start,
-            Vector3 end,
-            Color color,
-            Camera camera,
-            RectTransform canvasRect,
-            List<LineCommand> lines,
-            float thickness = 0f)
-        {
-            if (camera == null || canvasRect == null)
-                return;
-
-            Vector3 startScreen = camera.WorldToScreenPoint(start);
-            Vector3 endScreen = camera.WorldToScreenPoint(end);
-
-            if (startScreen.z <= 0f || endScreen.z <= 0f)
-                return;
-
-            Vector2 startLocal;
-            Vector2 endLocal;
-
-            if (!TryScreenPointToCanvas(
-                    canvasRect, startScreen, out startLocal) ||
-                !TryScreenPointToCanvas(
-                    canvasRect, endScreen, out endLocal))
-                return;
-
-            lines.Add(new LineCommand(
-                startLocal, endLocal, color, thickness));
-        }
-
-        private void AddHeadCircle(
-            Target target,
-            Camera camera,
-            RectTransform canvasRect,
-            List<LineCommand> lines,
-            Color color)
-        {
-            if (target.Head == null || target.Neck == null)
-                return;
-            Vector3 head = camera.WorldToScreenPoint(
-                target.Head.position);
-            Vector3 neck = camera.WorldToScreenPoint(
-                target.Neck.position);
-            Vector2 center;
-            Vector2 neckLocal;
-            if (head.z <= 0f || neck.z <= 0f ||
-                !TryScreenPointToCanvas(
-                    canvasRect, head, out center) ||
-                !TryScreenPointToCanvas(
-                    canvasRect, neck, out neckLocal))
-                return;
-            AddScreenCircle(
-                center,
-                Mathf.Clamp(
-                    Vector2.Distance(center, neckLocal) * 0.48f,
-                    2.5f,
-                    24f),
-                color,
-                lines,
-                _currentSkeletonThickness);
-        }
-
-        private static void AddScreenCircle(
-            Vector2 center,
-            float radius,
-            Color color,
-            List<LineCommand> lines,
-            float thickness)
-        {
-            const int segments = 14;
-            Vector2 previous =
-                center + new Vector2(radius, 0f);
-            for (int i = 1; i <= segments; i++)
-            {
-                float angle = i * Mathf.PI * 2f / segments;
-                Vector2 next = center + new Vector2(
-                    Mathf.Cos(angle) * radius,
-                    Mathf.Sin(angle) * radius);
-                lines.Add(new LineCommand(
-                    previous, next, color, thickness));
-                previous = next;
-            }
-        }
-
-        private static bool TryScreenPointToCanvas(
-            RectTransform canvasRect,
-            Vector2 screen,
-            out Vector2 local)
-        {
-            local = default(Vector2);
-            if (canvasRect == null ||
-                Screen.width <= 0 ||
-                Screen.height <= 0)
-                return false;
-
-            Rect rect = canvasRect.rect;
-            local = new Vector2(
-                rect.xMin + screen.x * rect.width / Screen.width,
-                rect.yMin + screen.y * rect.height / Screen.height);
-            return true;
-        }
-
-        private void AddScopeBoneEsp(
-            Target target,
-            Camera camera,
-            List<LineCommand> lines,
-            float projectedHeight,
-            Color visibleColor,
-            Color hiddenColor,
-            BoneVisibility visibleBones)
-        {
-            _useScopeSkeletonColor = true;
-            _scopeSkeletonVisibleColor = visibleColor;
-            _scopeSkeletonHiddenColor = hiddenColor;
-            _scopeVisibleBones = visibleBones;
-            _currentSkeletonThickness =
-                GetModelScaledSkeletonThickness(projectedHeight);
-            if (_showBones.Value)
-            {
-            AddScopeBoneLine(target.Head, target.Neck, BoneColor(target, BoneVisibility.Neck), camera, lines);
-            AddScopeBoneLine(target.Neck, target.Chest, BoneColor(target, BoneVisibility.Chest), camera, lines);
-            AddScopeBoneLine(target.Chest, target.Pelvis, BoneColor(target, BoneVisibility.Pelvis), camera, lines);
-            AddScopeBoneLine(target.Chest, target.LeftShoulder, BoneColor(target, BoneVisibility.LeftShoulder), camera, lines);
-            AddScopeBoneLine(target.LeftShoulder, target.LeftElbow, BoneColor(target, BoneVisibility.LeftElbow), camera, lines);
-            AddScopeBoneLine(target.LeftElbow, target.LeftHand, BoneColor(target, BoneVisibility.LeftHand), camera, lines);
-            AddScopeBoneLine(target.Chest, target.RightShoulder, BoneColor(target, BoneVisibility.RightShoulder), camera, lines);
-            AddScopeBoneLine(target.RightShoulder, target.RightElbow, BoneColor(target, BoneVisibility.RightElbow), camera, lines);
-            AddScopeBoneLine(target.RightElbow, target.RightHand, BoneColor(target, BoneVisibility.RightHand), camera, lines);
-            AddScopeBoneLine(target.Pelvis, target.LeftHip, BoneColor(target, BoneVisibility.LeftHip), camera, lines);
-            AddScopeBoneLine(target.LeftHip, target.LeftKnee, BoneColor(target, BoneVisibility.LeftKnee), camera, lines);
-            AddScopeBoneLine(target.LeftKnee, target.LeftCalf, BoneColor(target, BoneVisibility.LeftKnee), camera, lines);
-            AddScopeBoneLine(target.LeftCalf, target.LeftFoot, BoneColor(target, BoneVisibility.LeftFoot), camera, lines);
-            AddScopeBoneLine(target.Pelvis, target.RightHip, BoneColor(target, BoneVisibility.RightHip), camera, lines);
-            AddScopeBoneLine(target.RightHip, target.RightKnee, BoneColor(target, BoneVisibility.RightKnee), camera, lines);
-            AddScopeBoneLine(target.RightKnee, target.RightCalf, BoneColor(target, BoneVisibility.RightKnee), camera, lines);
-            AddScopeBoneLine(target.RightCalf, target.RightFoot, BoneColor(target, BoneVisibility.RightFoot), camera, lines);
-            AddScopeHeadCircle(
-                target, camera, lines,
-                BoneColor(target, BoneVisibility.Head));
-            }
-
-            Vector3 direction = target.Player.LookDirection;
-
-            if (_showAimLines.Value &&
-                target.Head != null &&
-                direction.sqrMagnitude > 0.001f)
-            {
-                AddScopeWorldLine(
-                    target.Head.position,
-                    target.Head.position + direction.normalized * 2f,
-                    Color.white,
-                    camera,
-                    lines,
-                    _aimLineThickness.Value);
-            }
-        }
-
-        private Color BoneColor(
-            Target target,
-            BoneVisibility bone)
-        {
-            if (_useScopeSkeletonColor)
-                return (_scopeVisibleBones & bone) != 0
-                    ? _scopeSkeletonVisibleColor
-                    : _scopeSkeletonHiddenColor;
-
-            Color color;
-            if (!target.HasPerBoneVisibility)
-                color = target.DisplayColor;
-            else if ((target.VisibleBones & bone) != 0)
-                color = target.Color;
-            else
-                color = GetRoleColor(target, true);
-
-            return ApplyScreenLayerFade(
-                color, target.ScreenLayerFade);
-        }
-
-        private void AddScopeBoneLine(
-            Transform start,
-            Transform end,
-            Color color,
-            Camera camera,
-            List<LineCommand> lines)
-        {
-            if (start != null && end != null)
-            {
-                AddScopeWorldLine(
-                    start.position, end.position, color, camera, lines,
-                    _currentSkeletonThickness);
-            }
-        }
-
-        private static void AddScopeWorldLine(
-            Vector3 start,
-            Vector3 end,
-            Color color,
-            Camera camera,
-            List<LineCommand> lines,
-            float thickness = 0f)
-        {
-            Vector3 startScreen = camera.WorldToScreenPoint(start);
-            Vector3 endScreen = camera.WorldToScreenPoint(end);
-
-            if (startScreen.z <= 0f || endScreen.z <= 0f)
-                return;
-
-            lines.Add(new LineCommand(
-                startScreen, endScreen, color, thickness));
-        }
 
         private void UpdateVisibility(
             Target target,
@@ -1347,20 +1082,6 @@ namespace FieldKit
             }
         }
 
-        private bool ShouldShowChams(EspKind kind)
-        {
-            switch (kind)
-            {
-                case EspKind.Pmc:
-                    return _chamsShowPmc.Value;
-                case EspKind.Scav:
-                    return _chamsShowScav.Value;
-                case EspKind.Boss:
-                    return _chamsShowBoss.Value;
-                default:
-                    return false;
-            }
-        }
 
         private bool Classify(
             Player player,
@@ -1417,39 +1138,85 @@ namespace FieldKit
             }
         }
 
-        private void AddScopeHeadCircle(
-            Target target,
-            Camera camera,
-            List<LineCommand> lines,
-            Color color)
-        {
-            if (target.Head == null || target.Neck == null)
-                return;
-            Vector3 head = camera.WorldToScreenPoint(
-                target.Head.position);
-            Vector3 neck = camera.WorldToScreenPoint(
-                target.Neck.position);
-            if (head.z <= 0f || neck.z <= 0f)
-                return;
-            AddScreenCircle(
-                head,
-                Mathf.Clamp(
-                    Vector2.Distance(
-                        (Vector2)head, (Vector2)neck) * 0.48f,
-                    2.5f,
-                    24f),
-                color,
-                lines,
-                _currentSkeletonThickness);
-        }
 
-        private static string FormatTargetEspText(
+        private string FormatTargetEspText(
             Target target,
             float distance)
         {
-            return target.RoleLabel + "\n" +
-                   target.Name + " | " +
-                   distance.ToString("0") + "m";
+            StringBuilder text = new StringBuilder(96);
+
+            if (_showRole.Value &&
+                !string.IsNullOrWhiteSpace(target.RoleLabel))
+                text.Append(target.RoleLabel);
+
+            StringBuilder details = new StringBuilder(80);
+            if (_showPlayerName.Value)
+                AppendEspDetail(details, target.Name);
+            if (_showWeapon.Value)
+                AppendEspDetail(details, target.WeaponName);
+            if (_showHealthPercentage.Value)
+            {
+                AppendEspDetail(
+                    details,
+                    Mathf.RoundToInt(target.HealthRatio * 100f) + "%");
+            }
+            if (_showDistance.Value)
+                AppendEspDetail(details, distance.ToString("0") + "m");
+
+            if (details.Length > 0)
+            {
+                if (text.Length > 0)
+                    text.Append('\n');
+                text.Append(details);
+            }
+
+            return text.ToString();
+        }
+
+        private string GetTargetEspText(
+            Target target,
+            float distance)
+        {
+            if (Time.unscaledTime >= target.NextTextUpdate)
+            {
+                target.CachedText = FormatTargetEspText(target, distance);
+                target.NextTextUpdate = Time.unscaledTime + 0.2f;
+            }
+
+            return target.CachedText ?? string.Empty;
+        }
+
+        private static void AppendEspDetail(
+            StringBuilder text,
+            string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return;
+
+            if (text.Length > 0)
+                text.Append(" | ");
+            text.Append(value);
+        }
+
+        private static string GetEquippedWeaponName(Player player)
+        {
+            try
+            {
+                Weapon weapon = player == null ||
+                                player.HandsController == null
+                    ? null
+                    : player.HandsController.Item as Weapon;
+                if (weapon == null)
+                    return string.Empty;
+
+                if (!string.IsNullOrWhiteSpace(weapon.ShortName))
+                    return weapon.ShortName;
+                return weapon.Name ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private void CreateOverlay()

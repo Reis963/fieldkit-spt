@@ -5,11 +5,12 @@ namespace FieldKit
     {
         private void RefreshCamera()
         {
-            if (_camera != null &&
-                _camera.enabled &&
-                _camera.gameObject.activeInHierarchy &&
-                _camera.targetTexture == null)
+            Camera main = Camera.main;
+            if (IsUsableMainCamera(main))
+            {
+                SetMainCamera(main, "Camera.main");
                 return;
+            }
 
             Camera best = null;
             float bestScore = float.MinValue;
@@ -18,20 +19,19 @@ namespace FieldKit
 
             foreach (Camera candidate in cameras)
             {
-                if (candidate == null ||
-                    !candidate.enabled ||
-                    !candidate.gameObject.activeInHierarchy ||
-                    candidate.orthographic ||
-                    candidate.targetTexture != null)
+                if (!IsUsableMainCamera(candidate))
                     continue;
 
                 float score = candidate.depth;
 
                 if (candidate.CompareTag("MainCamera"))
-                    score += 500f;
+                    score += 1000f;
 
                 if (candidate.name.IndexOf("FPS", StringComparison.OrdinalIgnoreCase) >= 0)
-                    score += 1000f;
+                    score += 500f;
+
+                if (candidate == _camera)
+                    score += 0.25f;
 
                 if (score > bestScore)
                 {
@@ -40,15 +40,107 @@ namespace FieldKit
                 }
             }
 
-            _camera = best != null ? best : Camera.main;
+            SetMainCamera(best, "fallback");
+        }
+
+        private static bool IsUsableMainCamera(Camera candidate)
+        {
+            return candidate != null &&
+                   candidate.enabled &&
+                   candidate.gameObject.activeInHierarchy &&
+                   !candidate.orthographic &&
+                   candidate.targetTexture == null;
+        }
+
+        private void SetMainCamera(Camera camera, string source)
+        {
+            if (_camera == camera)
+                return;
+
+            Camera previous = _camera;
+            _camera = camera;
+            _lastRenderFrame = -1;
+            _scopeRefreshRequested = true;
+
+            for (int i = 0; i < _targets.Count; i++)
+            {
+                Target target = _targets[i];
+                target.IsOnMainScreen = false;
+                target.HasSmoothedScreenRect = false;
+                target.HasVisibility = false;
+                target.HasPerBoneVisibility = false;
+                target.NextScreenCheck = 0f;
+                target.NextVisibilityUpdate = 0f;
+            }
+
+            if (_cameraDebug == null || !_cameraDebug.Value)
+                return;
+
+            LogSource.LogInfo(
+                "[Camera Debug] Main projection camera changed from " +
+                DescribeCamera(previous) + " to " +
+                DescribeCamera(camera) + " via " + source + ".");
+        }
+
+        private static string DescribeCamera(Camera camera)
+        {
+            if (camera == null)
+                return "<null>";
+
+            return string.Format(
+                "\"{0}\" fov={1:0.0} pixel={2}x{3} scaled={4}x{5} " +
+                "screen={6}x{7} rect=({8:0},{9:0},{10:0},{11:0}) " +
+                "depth={12:0.0} target={13}",
+                camera.name,
+                camera.fieldOfView,
+                camera.pixelWidth,
+                camera.pixelHeight,
+                camera.scaledPixelWidth,
+                camera.scaledPixelHeight,
+                Screen.width,
+                Screen.height,
+                camera.pixelRect.x,
+                camera.pixelRect.y,
+                camera.pixelRect.width,
+                camera.pixelRect.height,
+                camera.depth,
+                camera.targetTexture == null
+                    ? "<screen>"
+                    : camera.targetTexture.name + "(" +
+                      camera.targetTexture.width + "x" +
+                      camera.targetTexture.height + ")");
+        }
+
+        private static void LogActiveCameras(Camera[] cameras)
+        {
+            StringBuilder message = new StringBuilder(
+                "[Camera Debug] Active cameras:");
+
+            for (int i = 0; i < cameras.Length; i++)
+            {
+                message.Append("\n  ");
+                message.Append(DescribeCamera(cameras[i]));
+            }
+
+            LogSource.LogInfo(message.ToString());
         }
 
         private void RefreshScopeOverlays()
         {
+            if (_scopeEsp == null || !_scopeEsp.Value)
+            {
+                DestroyScopeOverlays();
+                return;
+            }
+
             for (int i = 0; i < _scopeOverlays.Count; i++)
                 _scopeOverlays[i].Seen = false;
 
-            foreach (Camera candidate in Camera.allCameras)
+            Camera[] activeCameras = Camera.allCameras;
+            if (_cameraDebug.Value)
+                LogActiveCameras(activeCameras);
+
+            foreach (Camera candidate in activeCameras)
             {
                 if (!IsScopeCamera(candidate))
                     continue;
@@ -302,36 +394,23 @@ namespace FieldKit
                     overlay.LensRenderer = ResolveOpticLens(overlay.Camera);
                 }
 
-                Rect screenRect;
+                Rect localLensRect;
 
                 if (!TryProjectRendererBounds(
-                    overlay.LensRenderer, _camera, out screenRect))
-                    continue;
-                float insetX = screenRect.width * 0.06f;
-                float insetY = screenRect.height * 0.06f;
-                screenRect.xMin += insetX;
-                screenRect.xMax -= insetX;
-                screenRect.yMin += insetY;
-                screenRect.yMax -= insetY;
-
-                Vector2 localMin;
-                Vector2 localMax;
-
-                if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
+                        overlay.LensRenderer,
+                        _camera,
                         _canvasRect,
-                        new Vector2(screenRect.xMin, screenRect.yMin),
-                        null,
-                        out localMin) ||
-                    !RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                        _canvasRect,
-                        new Vector2(screenRect.xMax, screenRect.yMax),
-                        null,
-                        out localMax))
+                        out localLensRect))
                     continue;
+                float insetX = localLensRect.width * 0.06f;
+                float insetY = localLensRect.height * 0.06f;
+                localLensRect.xMin += insetX;
+                localLensRect.xMax -= insetX;
+                localLensRect.yMin += insetY;
+                localLensRect.yMax -= insetY;
 
-                localRect = Rect.MinMaxRect(
-                    localMin.x, localMin.y, localMax.x, localMax.y);
-                overlay.LastLensScreenRect = screenRect;
+                localRect = localLensRect;
+                overlay.LastLensScreenRect = localLensRect;
                 overlay.HasLensScreenRect = true;
                 return true;
             }
@@ -342,11 +421,14 @@ namespace FieldKit
         private static bool TryProjectRendererBounds(
             Renderer renderer,
             Camera camera,
-            out Rect screenRect)
+            RectTransform canvasRect,
+            out Rect localRect)
         {
-            screenRect = default(Rect);
+            localRect = default(Rect);
 
-            if (renderer == null || camera == null)
+            if (renderer == null ||
+                camera == null ||
+                canvasRect == null)
                 return false;
 
             Bounds bounds = renderer.bounds;
@@ -364,22 +446,25 @@ namespace FieldKit
                     {
                         Vector3 point = center + Vector3.Scale(
                             extents, new Vector3(x, y, z));
-                        Vector3 screen = camera.WorldToScreenPoint(point);
-
-                        if (screen.z <= 0f)
+                        Vector2 local;
+                        if (!TryWorldPointToCanvas(
+                                camera,
+                                canvasRect,
+                                point,
+                                out local))
                             continue;
 
                         found = true;
-                        minX = Mathf.Min(minX, screen.x);
-                        minY = Mathf.Min(minY, screen.y);
-                        maxX = Mathf.Max(maxX, screen.x);
-                        maxY = Mathf.Max(maxY, screen.y);
+                        minX = Mathf.Min(minX, local.x);
+                        minY = Mathf.Min(minY, local.y);
+                        maxX = Mathf.Max(maxX, local.x);
+                        maxY = Mathf.Max(maxY, local.y);
                     }
 
             if (!found || maxX - minX < 10f || maxY - minY < 10f)
                 return false;
 
-            screenRect = Rect.MinMaxRect(minX, minY, maxX, maxY);
+            localRect = Rect.MinMaxRect(minX, minY, maxX, maxY);
             return true;
         }
 
@@ -479,25 +564,24 @@ namespace FieldKit
                         overlay.Boxes.Add(new BoxCommand(
                             rect, scopeColor));
                     }
-                    AddHealthBar(rect, target.HealthRatio, overlay.Lines);
-                    overlay.Text.Add(new TextCommand(
-                        new Vector2(rect.center.x, rect.yMax + 5f),
-                        FormatTargetEspText(
-                            target,
-                            Mathf.Sqrt(distanceSq)),
-                        scopeColor));
-
-                    if (_showBones.Value || _showAimLines.Value)
+                    if (_showHealthBar.Value)
                     {
-                        AddScopeBoneEsp(
-                            target,
-                            overlay.Camera,
-                            overlay.Lines,
-                            rect.height,
-                            target.Color,
-                            hiddenScopeColor,
-                            scopeVisibleBones);
+                        AddHealthBar(
+                            rect,
+                            target.HealthRatio,
+                            overlay.Lines);
                     }
+                    string label = GetTargetEspText(
+                        target,
+                        Mathf.Sqrt(distanceSq));
+                    if (!string.IsNullOrEmpty(label))
+                    {
+                        overlay.Text.Add(new TextCommand(
+                            new Vector2(rect.center.x, rect.yMax + 5f),
+                            label,
+                            scopeColor));
+                    }
+
                 }
 
                 overlay.Pass.SetGeometry(

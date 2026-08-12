@@ -64,7 +64,7 @@ namespace FieldKit
             GUILayout.EndScrollView();
         }
 
-        private static void DrawOptionSlider(
+        private void DrawOptionSlider(
             string label,
             BepInEx.Configuration.ConfigEntry<float> setting,
             float minimum,
@@ -78,24 +78,23 @@ namespace FieldKit
                 ? setting.Value.ToString(
                       format.Substring(0, format.Length - 1)) + "%"
                 : setting.Value.ToString(format);
+            GUILayout.BeginHorizontal(GUILayout.Height(26f));
             GUILayout.Label(
-                new GUIContent(
-                    label + ": " + displayValue,
-                    description));
-            Rect labelRect = GUILayoutUtility.GetLastRect();
+                new GUIContent(label, description),
+                GUILayout.Width(170f));
             setting.Value = GUILayout.HorizontalSlider(
-                setting.Value, minimum, maximum);
-            Rect sliderRect = GUILayoutUtility.GetLastRect();
-            GUI.Label(
-                Rect.MinMaxRect(
-                    Mathf.Min(labelRect.xMin, sliderRect.xMin),
-                    labelRect.yMin,
-                    Mathf.Max(labelRect.xMax, sliderRect.xMax),
-                    sliderRect.yMax),
-                new GUIContent("", description));
+                setting.Value,
+                minimum,
+                maximum,
+                GUILayout.ExpandWidth(true));
+            GUILayout.Label(
+                new GUIContent(displayValue, description),
+                _sliderValueStyle,
+                GUILayout.Width(76f));
+            GUILayout.EndHorizontal();
         }
 
-        private static void DrawOptionSlider(
+        private void DrawOptionSlider(
             string label,
             BepInEx.Configuration.ConfigEntry<int> setting,
             int minimum,
@@ -103,22 +102,23 @@ namespace FieldKit
             string format)
         {
             string description = OptionDescription(setting);
+            GUILayout.BeginHorizontal(GUILayout.Height(26f));
             GUILayout.Label(
-                new GUIContent(
-                    label + ": " + setting.Value.ToString(format),
-                    description));
-            Rect labelRect = GUILayoutUtility.GetLastRect();
+                new GUIContent(label, description),
+                GUILayout.Width(170f));
             setting.Value = Mathf.RoundToInt(
                 GUILayout.HorizontalSlider(
-                    setting.Value, minimum, maximum));
-            Rect sliderRect = GUILayoutUtility.GetLastRect();
-            GUI.Label(
-                Rect.MinMaxRect(
-                    Mathf.Min(labelRect.xMin, sliderRect.xMin),
-                    labelRect.yMin,
-                    Mathf.Max(labelRect.xMax, sliderRect.xMax),
-                    sliderRect.yMax),
-                new GUIContent("", description));
+                    setting.Value,
+                    minimum,
+                    maximum,
+                    GUILayout.ExpandWidth(true)));
+            GUILayout.Label(
+                new GUIContent(
+                    setting.Value.ToString(format),
+                    description),
+                _sliderValueStyle,
+                GUILayout.Width(76f));
+            GUILayout.EndHorizontal();
         }
 
         private void DrawOptionTooltip()

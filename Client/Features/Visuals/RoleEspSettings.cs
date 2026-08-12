@@ -16,7 +16,6 @@ namespace FieldKit
                 new Dictionary<string, EspRoleGroup>(
                     StringComparer.OrdinalIgnoreCase);
         private bool _espAllRolesExpanded;
-        private bool _chamAllRolesExpanded;
 
         private void ConfigureRoleEsp()
         {
@@ -74,22 +73,7 @@ namespace FieldKit
                     "ESP Role Colors",
                     configKey + " Hidden",
                     "#" + ColorUtility.ToHtmlStringRGBA(hidden),
-                    "Occluded ESP color for " + label + "."),
-                ChamsEnabled = Config.Bind(
-                    "Cham Roles",
-                    configKey + " Enabled",
-                    true,
-                    "Apply character chams to " + label + "."),
-                ChamVisibleColor = Config.Bind(
-                    "Cham Role Colors",
-                    configKey + " Visible",
-                    "#" + ColorUtility.ToHtmlStringRGBA(visible),
-                    "Visible cham color for " + label + "."),
-                ChamHiddenColor = Config.Bind(
-                    "Cham Role Colors",
-                    configKey + " Hidden",
-                    "#" + ColorUtility.ToHtmlStringRGBA(hidden),
-                    "Occluded cham color for " + label + ".")
+                    "Occluded ESP color for " + label + ".")
             };
             _espRoles.Add(settings);
             _espRolesByKey.Add(key, settings);
@@ -239,27 +223,6 @@ namespace FieldKit
                     : settings.DefaultVisible);
         }
 
-        private bool ShouldShowRoleChams(Target target)
-        {
-            EspRoleSettings settings = GetRoleSettings(target.RoleKey);
-            return settings != null
-                ? settings.ChamsEnabled.Value
-                : ShouldShowChams(target.Kind);
-        }
-
-        private Color GetRoleChamColor(
-            EspRoleSettings settings,
-            bool hidden)
-        {
-            return ParseVisualColor(
-                hidden
-                    ? settings.ChamHiddenColor.Value
-                    : settings.ChamVisibleColor.Value,
-                hidden
-                    ? settings.DefaultHidden
-                    : settings.DefaultVisible);
-        }
-
         private sealed class EspRoleSettings
         {
             public string Key;
@@ -270,22 +233,14 @@ namespace FieldKit
             public ConfigEntry<bool> Enabled;
             public ConfigEntry<string> VisibleColor;
             public ConfigEntry<string> HiddenColor;
-            public ConfigEntry<bool> ChamsEnabled;
-            public ConfigEntry<string> ChamVisibleColor;
-            public ConfigEntry<string> ChamHiddenColor;
             public Color DefaultVisible;
             public Color DefaultHidden;
-            public ChamMaterialSet ChamMaterials;
-            public string LastChamVisible;
-            public string LastChamHidden;
-            public float LastChamOpacity = -1f;
         }
 
         private sealed class EspRoleGroup
         {
             public string Name;
             public bool Expanded;
-            public bool ChamsExpanded;
             public readonly List<EspRoleSettings> Roles =
                 new List<EspRoleSettings>();
         }

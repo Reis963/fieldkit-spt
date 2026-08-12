@@ -1,52 +1,48 @@
 # FieldKit
 
-FieldKit is an in-raid administration and testing toolkit for SPT users, server
-administrators, and mod developers.
+FieldKit is a lightweight in-raid utility mod for SPT.
 
 ## Features
 
-- Character controls, including movement and player-state tools
-- Weapon tuning, ammo controls, and weapon diagnostics
-- Entity browsing and actions for players and loot
-- Searchable loot catalog with item spawning tools
-- ESP, labels, chams, and other world visualization options
-- Additional testing utilities for doors, extracts, and raid entities
+- Character health regeneration, hit punch, energy drain, and hydration drain
+- Character box ESP with visibility checking, configurable target information,
+  and magnified-optic projection
+- Active-quest highlighting for required items, visit objectives, and
+  place-or-repair locations
+- Menu font, scale, primary color, and hotkey customization
 
 ## Installation
 
-Extract the release ZIP into your SPT installation directory, then restart the
-SPT server and game. The archive installs:
+Extract the release package into your SPT installation directory, then restart
+the game. FieldKit installs its client plugin at:
 
 ```text
 BepInEx/plugins/Hysocs-FieldKit/FieldKit.dll
-SPT/user/mods/HysocsFieldKit/FieldKit.Server.dll
 ```
 
-To uninstall FieldKit, remove the `Hysocs-FieldKit` and `HysocsFieldKit`
-folders shown above.
+To uninstall FieldKit, remove the `Hysocs-FieldKit` folder shown above.
 
 ## Usage
 
 - Press `Insert` while in a raid to open or close the FieldKit menu.
-- Press `Home` to toggle ESP.
+- Press `Home` to toggle character ESP.
 - Press `F12` to open the BepInEx configuration menu, where FieldKit settings
   and hotkeys can also be changed.
 
 ## Building
 
-Open `FieldKit.sln` and build the entire solution in the `Release`
-configuration, or run:
+Open `FieldKit.sln` and build the project in the `Release` configuration, or
+run:
 
 ```powershell
 dotnet build FieldKit.sln -c Release -p:SkipDeploy=true
 ```
 
-The Release solution build creates `dist/FieldKit-1.2.0.zip` with both DLLs in
-the ready-to-install SPT 4.1 directory structure: the client is placed under
-`BepInEx/plugins`, and the server mod under `SPT_Runtime/user/mods`.
-`SkipDeploy=true` prevents the build from copying files into the active SPT
-installation; use `SkipPackage=true` if a ZIP is not wanted.
+`SkipDeploy=true` prevents the build from copying the client DLL into the
+configured SPT installation.
 
 ## License
 
 FieldKit is licensed under the [Apache License 2.0](LICENSE).
+Third-party components and adaptations are listed in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

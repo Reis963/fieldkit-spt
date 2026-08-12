@@ -16,11 +16,6 @@ namespace FieldKit
         private void ConfigureToggleHotkeys()
         {
             MapExistingToggleHotkey(_enabled, _espKey);
-            MapExistingToggleHotkey(_godMode, _godModeKey);
-            MapExistingToggleHotkey(
-                _infiniteStamina, _staminaKey);
-            MapExistingToggleHotkey(_noWeight, _noWeightKey);
-            MapExistingToggleHotkey(_chamsEnabled, _chamsKey);
 
             List<ConfigEntry<bool>> toggles =
                 new List<ConfigEntry<bool>>();

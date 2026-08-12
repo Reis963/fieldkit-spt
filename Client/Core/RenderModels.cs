@@ -65,30 +65,6 @@ namespace FieldKit
             RightFoot = 1 << 15
         }
 
-        private sealed class LootCategory
-        {
-            public string Id;
-            public string ParentId;
-            public string Name;
-            public int Order;
-            public int TotalItems;
-            public int SelectedItems;
-            public bool Expanded;
-            public readonly List<LootCategory> Children =
-                new List<LootCategory>();
-            public readonly List<LootCatalogItem> Items =
-                new List<LootCatalogItem>();
-        }
-
-        private sealed class LootCatalogItem
-        {
-            public string Id;
-            public string Name;
-            public float BasePrice;
-            public bool IsQuestItem;
-            public bool CanSellOnFlea;
-        }
-
         private sealed class Target
         {
             public Player Player;
@@ -102,7 +78,7 @@ namespace FieldKit
             public Color Color;
             public Color DisplayColor;
             public string Name;
-            public string CachedTextPrefix;
+            public string WeaponName;
             public string CachedText;
             public float NextTextUpdate;
             public float NextBoneRefresh;
@@ -120,22 +96,12 @@ namespace FieldKit
             public float LastScreenRectTime;
             public float ScreenLayerFade = 1f;
             public bool WasHighVisibilityPriority;
-            public bool ChamsActive;
             public bool HasPerBoneVisibility;
             public BoneVisibility VisibleBones;
             public BoneVisibility ScopeVisibleBones;
             public float NextScopeVisibilityUpdate;
             public int ScopeVisibilityCameraId;
             public bool ScopeVisibilityDetailed;
-            public Renderer[] ChamRenderers;
-            public Material[][] ChamOriginalMaterials;
-            public Material[][] ChamVisibleMaterials;
-            public Material[][] ChamOccludedMaterials;
-            public bool[] ChamApplied;
-            public bool[] ChamAppliedVisible;
-            public bool[] ChamOriginalOcclusion;
-            public readonly List<LimbChamSkin> LimbChamSkins =
-                new List<LimbChamSkin>();
             public readonly HashSet<int> ColliderIds =
                 new HashSet<int>();
             public Transform Head;
@@ -158,17 +124,6 @@ namespace FieldKit
             public Transform RightFoot;
         }
 
-        private sealed class LimbChamSkin
-        {
-            public SkinnedMeshRenderer Renderer;
-            public Mesh OriginalMesh;
-            public Material[] OriginalMaterials;
-            public Mesh InstanceMesh;
-            public BoneVisibility[] SubmeshLimbs;
-            public Material[] AppliedMaterials;
-            public bool OriginalOcclusion;
-        }
-
         private sealed class ScopeOverlay
         {
             public Camera Camera;
@@ -188,115 +143,6 @@ namespace FieldKit
             public float LastSeenTime;
         }
 
-        private enum WorldChamKind
-        {
-            Corpse,
-            Loot,
-            Count
-        }
-
-        private sealed class WorldChamState
-        {
-            public Renderer Renderer;
-            public WorldChamKind Kind;
-            public EFT.Interactive.LootItem LootSource;
-            public Material[] OriginalMaterials;
-            public Material[] ChamMaterials;
-            public bool Applied;
-        }
-
-        private sealed class VegetationManagerState
-        {
-            public GPUInstancer.GPUInstancerDetailManager Manager;
-            public bool WasEnabled;
-        }
-
-        private sealed class WorldChamMaterialSet
-        {
-            public readonly Material Material;
-
-            public WorldChamMaterialSet(string name)
-            {
-                Material = ChamMaterialSet.CreateChamMaterial(
-                    "Internal SPT World " + name,
-                    CompareFunction.LessEqual);
-            }
-
-            public void Update(Color color)
-            {
-                Material.SetColor("_Color", color);
-            }
-
-            public void Dispose()
-            {
-                UnityEngine.Object.Destroy(Material);
-            }
-        }
-
-        private sealed class ChamMaterialSet
-        {
-            public readonly Material Visible;
-            public readonly Material Occluded;
-
-            public ChamMaterialSet(string name)
-            {
-                Visible = CreateChamMaterial(
-                    "Internal SPT " + name + " Visible",
-                    CompareFunction.Always);
-                Occluded = CreateChamMaterial(
-                    "Internal SPT " + name + " Occluded",
-                    CompareFunction.Always);
-            }
-
-            public void Update(
-                Color visibleColor,
-                Color occludedColor,
-                float opacity)
-            {
-                Color visible = Color.Lerp(
-                    visibleColor, Color.white, 0.2f);
-                visible.a = visibleColor.a * opacity;
-
-                Color occluded = occludedColor;
-                occluded.a *= opacity;
-
-                Visible.SetColor("_Color", visible);
-                Occluded.SetColor("_Color", occluded);
-            }
-
-            public void Dispose()
-            {
-                UnityEngine.Object.Destroy(Visible);
-                UnityEngine.Object.Destroy(Occluded);
-            }
-
-            internal static Material CreateChamMaterial(
-                string name,
-                CompareFunction zTest)
-            {
-                Shader shader = Shader.Find("Hidden/Internal-Colored");
-
-                if (shader == null)
-                    throw new InvalidOperationException(
-                        "Hidden/Internal-Colored shader was not found.");
-
-                Material material = new Material(shader)
-                {
-                    name = name,
-                    hideFlags = HideFlags.HideAndDontSave,
-                    renderQueue = 3000
-                };
-
-                material.SetInt(
-                    "_SrcBlend", (int)BlendMode.SrcAlpha);
-                material.SetInt(
-                    "_DstBlend", (int)BlendMode.OneMinusSrcAlpha);
-                material.SetInt("_Cull", (int)CullMode.Back);
-                material.SetInt("_ZWrite", 0);
-                material.SetInt("_ZTest", (int)zTest);
-                return material;
-            }
-        }
     }
 
     internal struct BoxCommand

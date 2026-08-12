@@ -30,7 +30,6 @@ namespace FieldKit
             DetachWorld();
             _world = world;
             _camera = null;
-            _nextExtractionRefresh = 0f;
             _scopeRefreshRequested = true;
 
             if (_world == null)
@@ -38,10 +37,7 @@ namespace FieldKit
 
             _world.OnPersonAdd += OnPersonAdded;
             _world.OnLateUpdate += OnWorldLateUpdate;
-            _world.OnLootItemDestroyed += OnWorldLootItemDestroyed;
-            _world.AfterGameStarted += OnLootWorldStarted;
             GameWorld.OnDispose += OnWorldDisposed;
-            AttachLootWorldEvents();
             AttachLocalPlayer(_world.MainPlayer);
 
             if (_world.RegisteredPlayers == null)
@@ -53,39 +49,12 @@ namespace FieldKit
 
         private void DetachWorld()
         {
-            CancelPendingEntitySpawn();
-            ReleaseAllFieldKitSpawnCapacity();
-            ReleaseFriendlyAi();
-            ReleaseEntityAiOverrides();
-            _extractionPoints.Clear();
-            _usableExtractionIds.Clear();
-            _nextExtractionRefresh = 0f;
-            ClearLootEspCaches();
-            RestoreWorldChams();
-            RestoreVegetationCulling();
-            _worldChamStates.Clear();
-            _seenLootIds.Clear();
-            _knownLootIds.Clear();
-            _seenCorpseIds.Clear();
-            _knownCorpseIds.Clear();
-            _staleWorldChamIds.Clear();
-            _vegetationManagerStates.Clear();
-            _knownVegetationManagers.Clear();
-            _corpseChamDiscoveryDirty = true;
-            _lootChamDiscoveryDirty = true;
-            _worldChamPassDirty = true;
-            _lastCorpseChamsEnabled = false;
-            _lastLootChamsEnabled = false;
-            _lastLootChamDistance = -1f;
-            _hasWorldChamPassPosition = false;
-            _nextVegetationManagerScan = 0f;
+            ClearQuestObjectiveCaches();
 
             if (_world != null)
             {
                 _world.OnPersonAdd -= OnPersonAdded;
                 _world.OnLateUpdate -= OnWorldLateUpdate;
-                _world.OnLootItemDestroyed -= OnWorldLootItemDestroyed;
-                _world.AfterGameStarted -= OnLootWorldStarted;
                 GameWorld.OnDispose -= OnWorldDisposed;
             }
 
@@ -94,7 +63,6 @@ namespace FieldKit
             for (int i = _targets.Count - 1; i >= 0; i--)
                 RemoveTargetAt(i);
 
-            ReleaseNoWeightOverride();
             DestroyScopeOverlays();
             _world = null;
             _camera = null;
@@ -102,18 +70,6 @@ namespace FieldKit
 
         private void AttachLocalPlayer(Player player)
         {
-            if (_localPlayer != player)
-            {
-                CloseLivingAiInventory();
-                RestoreContainerSearchOverride();
-                ClearWeaponActionSpeed();
-                ClearAdsSpeed();
-                ClearProtectedMagazine();
-                RefreshEquippedWeapon(null, null, true);
-            }
-
-            RestoreDisabledPlayerColliders();
-
             if (_localPlayer != null)
             {
                 _localPlayer.OnSightChangedEvent -= OnSightChanged;
@@ -136,15 +92,6 @@ namespace FieldKit
             _localPlayer.OnSmoothSightChange += OnSmoothSightChanged;
             _localPlayer.OnHandsControllerChanged += OnHandsControllerChanged;
 
-            ICharacterController characterController =
-                _localPlayer.MovementContext == null
-                    ? null
-                    : _localPlayer.MovementContext.CharacterController;
-            LogSource.LogInfo(
-                "Local character controller: " +
-                (characterController == null
-                    ? "not initialized"
-                    : characterController.GetType().FullName));
         }
 
         private void OnPersonAdded(IPlayer person)
@@ -202,10 +149,7 @@ namespace FieldKit
                         roleSettings.VisibleColor.Value,
                         roleSettings.DefaultVisible),
                 Name = name,
-                CachedTextPrefix =
-                    (roleSettings == null
-                        ? KindName(kind)
-                        : roleSettings.Label) + " | " + name,
+                WeaponName = GetEquippedWeaponName(player),
                 HealthRatio = 1f,
                 HealthDirty = true,
                 IsAlive = true
@@ -274,6 +218,15 @@ namespace FieldKit
                 (target.Player.GetInstanceID() & 3) * 0.05f;
             CachePlayerColliders(target.Player, target.ColliderIds);
             RefreshTargetRole(target);
+            string weaponName = GetEquippedWeaponName(target.Player);
+            if (!string.Equals(
+                    target.WeaponName,
+                    weaponName,
+                    StringComparison.Ordinal))
+            {
+                target.WeaponName = weaponName;
+                target.NextTextUpdate = 0f;
+            }
         }
 
         private void RefreshTargetRole(Target target)
@@ -302,8 +255,6 @@ namespace FieldKit
                     settings.VisibleColor.Value,
                     settings.DefaultVisible);
             target.DisplayColor = target.Color;
-            target.CachedTextPrefix =
-                target.RoleLabel + " | " + target.Name;
             target.NextTextUpdate = 0f;
             target.NextVisibilityUpdate = 0f;
             target.NextScopeVisibilityUpdate = 0f;
@@ -312,11 +263,6 @@ namespace FieldKit
         private void OnPlayerRemoved(IPlayer person)
         {
             Player removed = person as Player;
-            _corpseChamDiscoveryDirty = true;
-            HandleLivingAiRemoved(removed);
-            HandleEntityAiRemoved(removed);
-            HandleFieldKitSpawnRemoved(removed);
-
             for (int i = _targets.Count - 1; i >= 0; i--)
             {
                 if (_targets[i].Player == removed)
@@ -338,30 +284,17 @@ namespace FieldKit
             }
 
             target.IsAlive = false;
-            RestoreTargetChams(target);
             _targets.RemoveAt(index);
         }
 
         private void OnWorldLateUpdate(float deltaTime)
         {
-            long perfStarted = PerfTimestamp();
-            try
-            {
-                OnWorldLateUpdateCore(deltaTime);
-            }
-            finally
-            {
-                RecordPerf(
-                    perfStarted,
-                    ref _perfWorldTicks,
-                    ref _perfWorldCalls,
-                    ref _perfWorldMaxTicks);
-            }
+            OnWorldLateUpdateCore(deltaTime);
         }
 
         private void OnWorldLateUpdateCore(float deltaTime)
         {
-            if (!_enabled.Value && !_chamsEnabled.Value)
+            if (!_enabled.Value)
                 return;
 
             float now = Time.unscaledTime;
@@ -370,13 +303,7 @@ namespace FieldKit
             {
                 Target target = _targets[i];
                 EnsureTargetRuntimeCache(target);
-                bool usedByEsp =
-                    _enabled.Value && ShouldShow(target);
-                bool usedByChams =
-                    _chamsEnabled.Value &&
-                    _chamsCharacters.Value &&
-                    ShouldShowRoleChams(target);
-                if (!usedByEsp && !usedByChams)
+                if (!ShouldShow(target))
                 {
                     target.IsOnMainScreen = false;
                     target.HasVisibility = false;
@@ -411,7 +338,7 @@ namespace FieldKit
                     false);
                 target.DisplayColor = GetDisplayColor(target);
 
-                if (usedByEsp && target.HealthDirty)
+                if (target.HealthDirty)
                 {
                     target.HealthDirty = false;
 
@@ -516,7 +443,6 @@ namespace FieldKit
             Player.AbstractHandsController previous,
             Player.AbstractHandsController current)
         {
-            RefreshHandsWeapon(current);
             InvalidateScope();
         }
 

@@ -1,60 +1,9 @@
-
 namespace FieldKit
 {
     public sealed partial class Plugin
     {
-        private void UpdateFastContainerSearching()
-        {
-            SkillManager skills =
-                _localPlayer == null ? null : _localPlayer.Skills;
-
-            if (!ReferenceEquals(skills, _searchSkillManager))
-            {
-                RestoreContainerSearchOverride();
-                _searchSkillManager = skills;
-            }
-
-            if (skills == null || !_fastContainerSearching.Value)
-            {
-                RestoreContainerSearchOverride();
-                return;
-            }
-
-            if (!_hasSavedContainerScope)
-            {
-                _savedContainerScope =
-                    skills.IntellectEliteContainerScope.Value;
-                _hasSavedContainerScope = true;
-            }
-
-            if (!skills.IntellectEliteContainerScope.Value)
-                skills.IntellectEliteContainerScope.Value = true;
-        }
-
-        private void RestoreContainerSearchOverride()
-        {
-            if (_searchSkillManager != null &&
-                _hasSavedContainerScope)
-            {
-                _searchSkillManager.IntellectEliteContainerScope.Value =
-                    _savedContainerScope;
-            }
-
-            _hasSavedContainerScope = false;
-            _searchSkillManager = null;
-        }
-
         private void UpdateCharacterTools()
         {
-            UpdateFastContainerSearching();
-            UpdateNoFallDamage();
-            UpdateNoMovementInertia();
-            UpdateCollisionFreeFlight();
-            UpdateCollisionFreeProximity();
-            UpdateDisabledPlayerColliders();
-            UpdateCollisionFreeRendering();
-            UpdateCollisionFreeFloorTraversal();
-
             ActiveHealthController health =
                 _localPlayer == null
                     ? null
@@ -67,26 +16,7 @@ namespace FieldKit
                 return;
             }
 
-            if (_infiniteEnergy.Value)
-            {
-                ValueStruct energy = health.Energy;
-
-                if (energy.Current < energy.Maximum)
-                    health.ChangeEnergy(
-                        energy.Maximum - energy.Current);
-            }
-
-            if (_infiniteHydration.Value)
-            {
-                ValueStruct hydration = health.Hydration;
-
-                if (hydration.Current < hydration.Maximum)
-                    health.ChangeHydration(
-                        hydration.Maximum - hydration.Current);
-            }
-
             float now = Time.unscaledTime;
-
             if (now < _nextCharacterRecoveryTime)
                 return;
 
@@ -99,16 +29,13 @@ namespace FieldKit
             _lastCharacterRecoveryTime = now;
             _nextCharacterRecoveryTime = now + 0.1f;
 
-            float recovery =
-                _healthRegeneration.Value * elapsed;
-
+            float recovery = _healthRegeneration.Value * elapsed;
             if (recovery <= 0f)
                 return;
 
             for (int i = 0; i < 7; i++)
             {
                 EBodyPart bodyPart = (EBodyPart)i;
-
                 if (health.IsBodyPartDestroyed(bodyPart))
                     continue;
 
@@ -119,105 +46,13 @@ namespace FieldKit
                     value.Maximum - value.Current);
 
                 if (amount > 0f)
+                {
                     health.ChangeHealth(
                         bodyPart,
                         amount,
-                        new DamageInfoStruct());
+                        default);
+                }
             }
         }
-
-        private void UpdateNoMovementInertia()
-        {
-            if (_localPlayer == null ||
-                !_noMovementInertia.Value)
-                return;
-
-            MovePlayerState state =
-                _localPlayer.MovementContext?.CurrentState
-                    as MovePlayerState;
-            if (state == null)
-                return;
-
-            state.InertiaDirection = state.LastDirectionInput;
-            state.LastNonZeroDirectionInput =
-                state.LastDirectionInput;
-            state.smoothMovementDirectionTime = 0f;
-            state.smoothMovementDirectionDuration = 0f;
-            state.TransitionCoef = 1f;
-
-            RunDirectionBlendVelocityField?.SetValue(
-                state, Vector2.zero);
-            RunDiscreteDirectionDelayField?.SetValue(
-                state, 0f);
-        }
-
-        private void UpdateNoFallDamage()
-        {
-            ActiveHealthController health =
-                _localPlayer == null
-                    ? null
-                    : _localPlayer.ActiveHealthController;
-
-            if (!ReferenceEquals(health, _fallDamageHealthController))
-            {
-                RestoreFallSafeHeight();
-                _fallDamageHealthController = health;
-            }
-
-            if (health == null || !_noFallDamage.Value)
-            {
-                RestoreFallSafeHeight();
-                return;
-            }
-
-            if (!_hasSavedFallSafeHeight)
-            {
-                _savedFallSafeHeight = health.FallSafeHeight;
-                _hasSavedFallSafeHeight = true;
-            }
-
-            health.FallSafeHeight = 100000f;
-        }
-
-        private void RestoreFallSafeHeight()
-        {
-            if (_fallDamageHealthController != null &&
-                _hasSavedFallSafeHeight)
-            {
-                _fallDamageHealthController.FallSafeHeight =
-                    _savedFallSafeHeight;
-            }
-
-            _hasSavedFallSafeHeight = false;
-        }
-
-        private void RestoreLocalCharacter()
-        {
-            ActiveHealthController health =
-                _localPlayer == null
-                    ? null
-                    : _localPlayer.ActiveHealthController;
-
-            if (health == null)
-                return;
-
-            for (int i = 0; i < 7; i++)
-                health.FullRestoreBodyPart((EBodyPart)i);
-        }
-
-        private void RemoveLocalNegativeEffects()
-        {
-            ActiveHealthController health =
-                _localPlayer == null
-                    ? null
-                    : _localPlayer.ActiveHealthController;
-
-            if (health == null)
-                return;
-
-            for (int i = 0; i <= 7; i++)
-                health.RemoveNegativeEffects((EBodyPart)i);
-        }
-
     }
 }

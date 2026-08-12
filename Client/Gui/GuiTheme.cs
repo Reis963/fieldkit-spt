@@ -70,7 +70,7 @@ namespace FieldKit
                 accent,
                 accent);
             _adminSkin.window.border = new RectOffset(0, 0, 0, 0);
-            _adminSkin.window.padding = new RectOffset(14, 14, 34, 14);
+            _adminSkin.window.padding = new RectOffset(10, 10, 8, 10);
             _adminSkin.window.fontSize = 14;
             _adminSkin.window.fontStyle = FontStyle.Bold;
             _adminSkin.window.alignment = TextAnchor.UpperLeft;
@@ -84,8 +84,8 @@ namespace FieldKit
                 text,
                 text);
             _adminSkin.box.border = new RectOffset(4, 4, 4, 4);
-            _adminSkin.box.padding = new RectOffset(14, 14, 12, 14);
-            _adminSkin.box.margin = new RectOffset(5, 5, 6, 6);
+            _adminSkin.box.padding = new RectOffset(12, 12, 9, 11);
+            _adminSkin.box.margin = new RectOffset(2, 2, 3, 4);
 
             ConfigureStyle(
                 _adminSkin.button,
@@ -128,10 +128,10 @@ namespace FieldKit
             _adminSkin.toggle.wordWrap = false;
             _adminSkin.toggle.fixedHeight = Mathf.Ceil(
                 Mathf.Max(
-                    30f,
+                    26f,
                     _adminSkin.toggle.CalcHeight(
                         new GUIContent("Ag"),
-                        400f) + 8f));
+                        400f) + 5f));
             _adminSkin.toggle.alignment = TextAnchor.MiddleLeft;
 
             _adminSkin.label.normal.textColor = text;
@@ -152,7 +152,7 @@ namespace FieldKit
                 new RectOffset(8, 8, 8, 8);
             _adminSkin.horizontalSlider.fixedHeight = 18f;
             _adminSkin.horizontalSlider.margin =
-                new RectOffset(5, 5, 4, 8);
+                new RectOffset(5, 5, 3, 3);
             _adminSkin.horizontalSlider.padding =
                 new RectOffset(0, 0, 0, 0);
             _adminSkin.horizontalSlider.overflow =
@@ -208,28 +208,89 @@ namespace FieldKit
             _adminSkin.verticalScrollbarThumb.fixedWidth = 10f;
 
             _tabStyle = new GUIStyle(_adminSkin.button);
-            _tabStyle.fixedHeight = 36f;
-            _tabStyle.fontStyle = FontStyle.Bold;
-            _tabStyle.normal.background = windowTexture;
-            _tabStyle.normal.textColor = muted;
+            _tabStyle.fixedHeight = 32f;
+            _tabStyle.fontStyle = FontStyle.Normal;
+            _tabStyle.alignment = TextAnchor.MiddleLeft;
+            _tabStyle.padding = new RectOffset(12, 8, 4, 4);
+            _tabStyle.margin = new RectOffset(0, 0, 2, 2);
+            _tabStyle.normal.background = surfaceTexture;
+            _tabStyle.normal.textColor = text;
             _tabStyle.hover.background = hoverTexture;
-            _tabStyle.hover.textColor = text;
-            _tabStyle.onNormal.background = raisedTexture;
-            _tabStyle.onNormal.textColor = accent;
-            _tabStyle.onHover.background = raisedTexture;
-            _tabStyle.onHover.textColor = accentHover;
-            _tabStyle.onActive.background = accentTexture;
-            _tabStyle.onActive.textColor = Color.white;
-            _tabStyle.focused.background = windowTexture;
-            _tabStyle.focused.textColor = muted;
-            _tabStyle.onFocused.background = raisedTexture;
-            _tabStyle.onFocused.textColor = accent;
+            _tabStyle.hover.textColor = accentHover;
+            _tabStyle.active.background = raisedTexture;
+            _tabStyle.active.textColor = accent;
+
+            _selectedTabStyle = new GUIStyle(_tabStyle);
+            _selectedTabStyle.fontStyle = FontStyle.Bold;
+            _selectedTabStyle.normal.background = accentTexture;
+            _selectedTabStyle.normal.textColor = Color.white;
+            _selectedTabStyle.hover.background = accentHoverTexture;
+            _selectedTabStyle.hover.textColor = Color.white;
+            _selectedTabStyle.active.background = accentTexture;
+            _selectedTabStyle.active.textColor = Color.white;
+
+            _menuHeaderStyle = new GUIStyle(_adminSkin.box);
+            _menuHeaderStyle.normal.background = surfaceTexture;
+            _menuHeaderStyle.padding = new RectOffset(10, 5, 2, 2);
+            _menuHeaderStyle.margin = new RectOffset(0, 0, 0, 0);
+            _menuHeaderStyle.alignment = TextAnchor.MiddleLeft;
+
+            _menuTitleStyle = new GUIStyle(_adminSkin.label);
+            _menuTitleStyle.fontStyle = FontStyle.Bold;
+            _menuTitleStyle.fontSize = 14;
+            _menuTitleStyle.normal.textColor = accent;
+            _menuTitleStyle.alignment = TextAnchor.MiddleLeft;
+            _menuTitleStyle.padding = new RectOffset(0, 8, 0, 0);
+
+            _menuSubtitleStyle = new GUIStyle(_adminSkin.label);
+            _menuSubtitleStyle.fontSize = 11;
+            _menuSubtitleStyle.normal.textColor = muted;
+            _menuSubtitleStyle.alignment = TextAnchor.MiddleLeft;
+            _menuSubtitleStyle.padding = new RectOffset(0, 0, 1, 0);
+
+            _sidebarStyle = new GUIStyle(_adminSkin.box);
+            _sidebarStyle.normal.background = surfaceTexture;
+            _sidebarStyle.padding = new RectOffset(7, 7, 8, 8);
+            _sidebarStyle.margin = new RectOffset(0, 0, 0, 0);
+
+            _sidebarHeaderStyle = new GUIStyle(_adminSkin.label);
+            _sidebarHeaderStyle.fontSize = 10;
+            _sidebarHeaderStyle.fontStyle = FontStyle.Bold;
+            _sidebarHeaderStyle.normal.textColor = muted;
+            _sidebarHeaderStyle.padding = new RectOffset(7, 0, 2, 6);
+
+            _contentPaneStyle = new GUIStyle(_adminSkin.box);
+            _contentPaneStyle.normal.background = windowTexture;
+            _contentPaneStyle.border = new RectOffset(0, 0, 0, 0);
+            _contentPaneStyle.padding = new RectOffset(5, 5, 4, 4);
+            _contentPaneStyle.margin = new RectOffset(0, 0, 0, 0);
+
+            _pageTitleStyle = new GUIStyle(_adminSkin.label);
+            _pageTitleStyle.fontSize = 16;
+            _pageTitleStyle.fontStyle = FontStyle.Bold;
+            _pageTitleStyle.normal.textColor = text;
+            _pageTitleStyle.padding = new RectOffset(5, 0, 1, 5);
+
+            _closeButtonStyle = new GUIStyle(_adminSkin.button);
+            _closeButtonStyle.fixedWidth = 26f;
+            _closeButtonStyle.fixedHeight = 24f;
+            _closeButtonStyle.fontSize = 17;
+            _closeButtonStyle.fontStyle = FontStyle.Normal;
+            _closeButtonStyle.alignment = TextAnchor.MiddleCenter;
+            _closeButtonStyle.padding = new RectOffset(0, 0, 0, 2);
+            _closeButtonStyle.margin = new RectOffset(2, 0, 1, 1);
+
+            _sliderValueStyle = new GUIStyle(_adminSkin.label);
+            _sliderValueStyle.alignment = TextAnchor.MiddleRight;
+            _sliderValueStyle.normal.textColor = muted;
+            _sliderValueStyle.wordWrap = false;
+            _sliderValueStyle.padding = new RectOffset(5, 2, 0, 0);
 
             _sectionTitleStyle = new GUIStyle(_adminSkin.label);
             _sectionTitleStyle.normal.textColor = accent;
             _sectionTitleStyle.fontStyle = FontStyle.Bold;
-            _sectionTitleStyle.fontSize = 14;
-            _sectionTitleStyle.margin = new RectOffset(0, 0, 0, 6);
+            _sectionTitleStyle.fontSize = 13;
+            _sectionTitleStyle.margin = new RectOffset(0, 0, 0, 4);
 
             _resetButtonStyle = new GUIStyle(_adminSkin.button);
             _resetButtonStyle.fixedWidth = 28f;
@@ -622,6 +683,16 @@ namespace FieldKit
 
             _adminSkin = null;
             _tabStyle = null;
+            _selectedTabStyle = null;
+            _menuHeaderStyle = null;
+            _menuTitleStyle = null;
+            _menuSubtitleStyle = null;
+            _sidebarStyle = null;
+            _sidebarHeaderStyle = null;
+            _contentPaneStyle = null;
+            _pageTitleStyle = null;
+            _closeButtonStyle = null;
+            _sliderValueStyle = null;
             _sectionTitleStyle = null;
             _resetButtonStyle = null;
             _dropdownButtonStyle = null;

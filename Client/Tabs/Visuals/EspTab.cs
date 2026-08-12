@@ -9,14 +9,12 @@ namespace FieldKit
         private Color _openColorFallback;
         private GUIStyle _espRoleFoldoutStyle;
         private Vector2 _espRoleListScroll;
-        private Vector2 _chamRoleListScroll;
 
         private void DrawEspMenu()
         {
             _espMenuScroll = BeginVerticalScrollView(
-                _espMenuScroll,
-                GUILayout.Height(
-                    Mathf.Max(300f, MenuHeight - 105f)));
+                    _espMenuScroll,
+                    GUILayout.Height(MenuContentHeight));
 
             BeginCategoryColumns();
             BeginCategoryPanel("ESP Targets");
@@ -30,11 +28,9 @@ namespace FieldKit
                 DrawRoleGroup(_espRoleGroups[i]);
             EndVerticalScrollView();
             DrawOptionToggle(_showBoxes, " Show Boxes");
-            DrawOptionToggle(_showBones, " Show Bone ESP");
-            DrawOptionToggle(_showAimLines, " Show Aim Lines");
             DrawOptionToggle(
                 _visibilityCheck, " Visibility Check");
-            DrawExtractionEspRow();
+            DrawOptionToggle(_scopeEsp, " Scope ESP");
             if (DrawResetGroupButton())
             {
                 _enabled.Value = true;
@@ -50,26 +46,37 @@ namespace FieldKit
                             role.DefaultHidden);
                 }
                 _showBoxes.Value = true;
-                _showBones.Value = true;
-                _showAimLines.Value = true;
                 _visibilityCheck.Value = true;
-                _showExtractions.Value = true;
-                _extractionColor.Value = "#F59E0BFF";
-                _usableExtractionColor.Value = "#22C55EFF";
+                _scopeEsp.Value = true;
                 ResetVisualColors();
             }
             EndCategoryPanel();
 
+            BeginCategoryPanel("ESP Information");
+            DrawOptionToggle(_showHealthBar, " Show Health Bar");
+            DrawOptionToggle(
+                _showHealthPercentage, " Show Health Percentage");
+            DrawOptionToggle(_showPlayerName, " Show Player Name");
+            DrawOptionToggle(_showRole, " Show Role");
+            DrawOptionToggle(_showWeapon, " Show Weapon");
+            DrawOptionToggle(_showDistance, " Show Distance");
+            if (DrawResetGroupButton())
+            {
+                _showHealthBar.Value = true;
+                _showHealthPercentage.Value = true;
+                _showPlayerName.Value = true;
+                _showRole.Value = true;
+                _showWeapon.Value = true;
+                _showDistance.Value = true;
+            }
+            EndCategoryPanel();
+
+            NextCategoryColumn();
             BeginCategoryPanel("ESP Geometry & Text");
             DrawOptionSlider(
                 "Distance", _maxDistance, 25f, 1500f, "0m");
             DrawOptionSlider(
                 "Box thickness", _lineThickness, 1f, 8f, "0.0");
-            DrawOptionSlider(
-                "Skeleton thickness", _boneThickness, 0.5f, 8f, "0.0");
-            DrawOptionSlider(
-                "Aim-line thickness",
-                _aimLineThickness, 0.5f, 8f, "0.0");
             DrawOptionSlider(
                 "Scope color", _scopeColorBrightness,
                 0.5f, 2f, "0.00");
@@ -91,119 +98,15 @@ namespace FieldKit
             {
                 _maxDistance.Value = 500f;
                 _lineThickness.Value = 2f;
-                _boneThickness.Value = 2f;
-                _aimLineThickness.Value = 2f;
                 _scopeColorBrightness.Value = 0.5f;
                 _fontSize.Value = 13;
                 _espFontName.Value = "Segoe UI";
                 _textOutlineThickness.Value = 1f;
             }
             EndCategoryPanel();
-
-            NextCategoryColumn();
-            BeginCategoryPanel("Chams");
-            DrawOptionToggle(_chamsEnabled, " GPU Chams");
-            DrawOptionToggle(_chamsCharacters, " Characters");
-            DrawOptionToggle(
-                _chamsPerLimbVisibility,
-                " Per-limb visibility");
-            DrawColorColumnHeaders();
-            _chamRoleListScroll = BeginVerticalScrollView(
-                _chamRoleListScroll,
-                GUILayout.Height(260f));
-            DrawAllChamRoleRow();
-            for (int i = 0; i < _espRoleGroups.Count; i++)
-                DrawChamRoleGroup(_espRoleGroups[i]);
-            EndVerticalScrollView();
-            GUILayout.Space(5f);
-            GUILayout.Label("World (RGBA)", _sectionTitleStyle);
-            DrawWorldChamRow(
-                _chamsCorpses, " Corpses", WorldChamKind.Corpse);
-            DrawWorldChamRow(
-                _chamsLoot, " Loot", WorldChamKind.Loot);
-            DrawOptionToggle(
-                _cullGrass,
-                " Disable GPU grass (performance)");
-            GUILayout.Label(
-                "Loot render distance: " +
-                Mathf.RoundToInt(_lootRenderDistance.Value) + "m");
-            _lootRenderDistance.Value = GUILayout.HorizontalSlider(
-                _lootRenderDistance.Value, 10f, 1000f);
-            GUILayout.Label(
-                "Character distance: " +
-                Mathf.RoundToInt(_chamsMaxDistance.Value) + "m");
-            _chamsMaxDistance.Value = GUILayout.HorizontalSlider(
-                _chamsMaxDistance.Value, 25f, 500f);
-
-            GUILayout.Label(
-                "Character opacity: " +
-                _chamsOpacity.Value.ToString("0.00"));
-            _chamsOpacity.Value = GUILayout.HorizontalSlider(
-                _chamsOpacity.Value, 0.1f, 1f);
-            DrawOptionSlider(
-                "Limb width",
-                _chamsLimbWidth, 0.01f, 0.12f, "0.000");
-            if (DrawResetGroupButton())
-            {
-                _chamsEnabled.Value = false;
-                _chamsCharacters.Value = true;
-                _chamsPerLimbVisibility.Value = true;
-                _chamsShowPmc.Value = true;
-                _chamsShowScav.Value = true;
-                _chamsShowBoss.Value = true;
-                for (int i = 0; i < _espRoles.Count; i++)
-                {
-                    EspRoleSettings role = _espRoles[i];
-                    role.ChamsEnabled.Value = true;
-                    role.ChamVisibleColor.Value =
-                        "#" + ColorUtility.ToHtmlStringRGBA(
-                            role.DefaultVisible);
-                    role.ChamHiddenColor.Value =
-                        "#" + ColorUtility.ToHtmlStringRGBA(
-                            role.DefaultHidden);
-                }
-                _chamsMaxDistance.Value = 250f;
-                _chamsOpacity.Value = 0.65f;
-                _chamsLimbWidth.Value = 0.045f;
-                ResetChamColors();
-                ResetWorldChamSettings();
-            }
-            EndCategoryPanel();
             EndCategoryColumns();
 
             EndVerticalScrollView();
-        }
-
-        private void DrawExtractionEspRow()
-        {
-            GUILayout.BeginHorizontal();
-            DrawOptionToggleLabel(
-                _showExtractions,
-                " Map extractions",
-                GUILayout.ExpandWidth(true));
-            DrawColorSquare(
-                _extractionColor,
-                GetExtractionColor(false),
-                new Color(0.96f, 0.62f, 0.04f, 1f),
-                "Unavailable map exits");
-            DrawColorSquare(
-                _usableExtractionColor,
-                GetExtractionColor(true),
-                new Color(0.13f, 0.77f, 0.37f, 1f),
-                "Usable map exits");
-            GUILayout.Space(76f);
-            GUILayout.EndHorizontal();
-        }
-
-        private Color GetExtractionColor(bool usable)
-        {
-            return usable
-                ? ParseVisualColor(
-                    _usableExtractionColor.Value,
-                    new Color(0.13f, 0.77f, 0.37f, 1f))
-                : ParseVisualColor(
-                    _extractionColor.Value,
-                    new Color(0.96f, 0.62f, 0.04f, 1f));
         }
 
         private void DrawRoleColorRow(EspRoleSettings role)
@@ -391,126 +294,6 @@ namespace FieldKit
             GUI.color = previousColor;
         }
 
-        private void DrawChamRoleColorRow(EspRoleSettings role)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(
-                role.FollowerSubcategory
-                    ? 68f
-                    : 42f);
-            DrawOptionToggleLabel(
-                role.ChamsEnabled,
-                " " + RoleLeafName(role),
-                GUILayout.ExpandWidth(true));
-            DrawColorSquare(
-                role.ChamVisibleColor,
-                GetRoleChamColor(role, false),
-                role.DefaultVisible,
-                role.Label + " chams visible");
-            DrawColorSquare(
-                role.ChamHiddenColor,
-                GetRoleChamColor(role, true),
-                role.DefaultHidden,
-                role.Label + " chams hidden");
-            DrawOptionHotkey(role.ChamsEnabled);
-            GUILayout.EndHorizontal();
-        }
-
-        private void DrawAllChamRoleRow()
-        {
-            int selected = CountEnabledChamRoles(_espRoles);
-            bool all = selected == _espRoles.Count && _espRoles.Count > 0;
-            bool any = selected > 0;
-
-            GUILayout.BeginHorizontal();
-            if (DrawRoleFoldoutButton(_chamAllRolesExpanded))
-            {
-                _chamAllRolesExpanded = !_chamAllRolesExpanded;
-                for (int i = 0; i < _espRoleGroups.Count; i++)
-                    _espRoleGroups[i].ChamsExpanded =
-                        _chamAllRolesExpanded;
-            }
-            bool toggled = GUILayout.Toggle(
-                all,
-                (any && !all ? " Some" : " All") +
-                " roles (" + selected + "/" + _espRoles.Count + ")",
-                GUILayout.ExpandWidth(true));
-            if (toggled != all)
-                SetChamRolesEnabled(_espRoles, toggled);
-            GUILayout.Space(52f);
-            GUILayout.Space(52f);
-            GUILayout.Space(76f);
-            GUILayout.EndHorizontal();
-        }
-
-        private void DrawChamRoleGroup(EspRoleGroup group)
-        {
-            int selected = CountEnabledChamRoles(group.Roles);
-            bool all = selected == group.Roles.Count &&
-                       group.Roles.Count > 0;
-            bool any = selected > 0;
-
-            GUILayout.BeginHorizontal();
-            GUILayout.Space(13f);
-            if (DrawRoleFoldoutButton(group.ChamsExpanded))
-                group.ChamsExpanded = !group.ChamsExpanded;
-            bool toggled = GUILayout.Toggle(
-                all,
-                (any && !all ? " Some " : " ") +
-                group.Name + " (" + selected + "/" +
-                group.Roles.Count + ")",
-                GUILayout.ExpandWidth(true));
-            if (toggled != all)
-                SetChamRolesEnabled(group.Roles, toggled);
-            GUILayout.Space(52f);
-            GUILayout.Space(52f);
-            GUILayout.Space(76f);
-            GUILayout.EndHorizontal();
-
-            if (!group.ChamsExpanded)
-                return;
-            for (int i = 0; i < group.Roles.Count; i++)
-                DrawChamRoleColorRow(group.Roles[i]);
-        }
-
-        private static int CountEnabledChamRoles(
-            System.Collections.Generic.IList<EspRoleSettings> roles)
-        {
-            int count = 0;
-            for (int i = 0; i < roles.Count; i++)
-            {
-                if (roles[i].ChamsEnabled.Value)
-                    count++;
-            }
-            return count;
-        }
-
-        private static void SetChamRolesEnabled(
-            System.Collections.Generic.IList<EspRoleSettings> roles,
-            bool enabled)
-        {
-            for (int i = 0; i < roles.Count; i++)
-                roles[i].ChamsEnabled.Value = enabled;
-        }
-
-        private void DrawWorldChamRow(
-            ConfigEntry<bool> enabled,
-            string label,
-            WorldChamKind kind)
-        {
-            GUILayout.BeginHorizontal();
-            DrawOptionToggleLabel(
-                enabled, label, GUILayout.ExpandWidth(true));
-            DrawColorSquare(
-                GetWorldChamColorSetting(kind),
-                GetWorldChamColor(kind),
-                GetWorldChamFallback(kind),
-                GetWorldChamName(kind));
-            GUILayout.Space(52f);
-            DrawOptionHotkey(enabled);
-            GUILayout.EndHorizontal();
-        }
-
         private void DrawColorPickerPopout()
         {
             if (_openColorSetting == null)
@@ -633,41 +416,6 @@ namespace FieldKit
             }
         }
 
-        private Color GetChamColor(EspKind kind, bool occluded = false)
-        {
-            ConfigEntry<string> setting =
-                GetChamColorSetting(kind, occluded);
-            Color fallback = occluded
-                ? GetOccludedFallback(kind)
-                : GetVisualFallback(kind);
-            return setting != null
-                ? ParseVisualColor(setting.Value, fallback)
-                : fallback;
-        }
-
-        private ConfigEntry<string> GetChamColorSetting(
-            EspKind kind,
-            bool occluded)
-        {
-            switch (kind)
-            {
-                case EspKind.Pmc:
-                    return occluded
-                        ? _pmcChamOccludedColor
-                        : _pmcChamColor;
-                case EspKind.Scav:
-                    return occluded
-                        ? _scavChamOccludedColor
-                        : _scavChamColor;
-                case EspKind.Boss:
-                    return occluded
-                        ? _bossChamOccludedColor
-                        : _bossChamColor;
-                default:
-                    return null;
-            }
-        }
-
         private static Color GetVisualFallback(EspKind kind)
         {
             switch (kind)
@@ -704,89 +452,6 @@ namespace FieldKit
             ApplyConfiguredTargetColors();
         }
 
-        private void ResetChamColors()
-        {
-            _pmcChamColor.Value = "#FF4040FF";
-            _scavChamColor.Value = "#FFD91AFF";
-            _bossChamColor.Value = "#FF26E6FF";
-            _pmcChamOccludedColor.Value = "#4D1313BF";
-            _scavChamOccludedColor.Value = "#4D4108BF";
-            _bossChamOccludedColor.Value = "#4D0745BF";
-        }
-
-        private bool IsWorldChamEnabled(WorldChamKind kind)
-        {
-            switch (kind)
-            {
-                case WorldChamKind.Corpse:
-                    return _chamsCorpses.Value;
-                case WorldChamKind.Loot:
-                    return _chamsLoot.Value;
-                default:
-                    return false;
-            }
-        }
-
-        private Color GetWorldChamColor(WorldChamKind kind)
-        {
-            ConfigEntry<string> setting =
-                GetWorldChamColorSetting(kind);
-            Color fallback = GetWorldChamFallback(kind);
-            return setting != null
-                ? ParseVisualColor(setting.Value, fallback)
-                : fallback;
-        }
-
-        private ConfigEntry<string> GetWorldChamColorSetting(
-            WorldChamKind kind)
-        {
-            switch (kind)
-            {
-                case WorldChamKind.Corpse:
-                    return _chamsCorpseColor;
-                case WorldChamKind.Loot:
-                    return _chamsLootColor;
-                default:
-                    return null;
-            }
-        }
-
-        private static Color GetWorldChamFallback(WorldChamKind kind)
-        {
-            switch (kind)
-            {
-                case WorldChamKind.Corpse:
-                    return new Color(0.66f, 0.33f, 0.97f, 0.5f);
-                case WorldChamKind.Loot:
-                    return new Color(0.13f, 0.83f, 0.93f, 0.5f);
-                default:
-                    return Color.white;
-            }
-        }
-
-        private static string GetWorldChamName(WorldChamKind kind)
-        {
-            switch (kind)
-            {
-                case WorldChamKind.Corpse:
-                    return "Corpses";
-                case WorldChamKind.Loot:
-                    return "Loot";
-                default:
-                    return "World";
-            }
-        }
-
-        private void ResetWorldChamSettings()
-        {
-            _chamsCorpses.Value = false;
-            _chamsLoot.Value = false;
-            _cullGrass.Value = false;
-            _lootRenderDistance.Value = 250f;
-            _chamsCorpseColor.Value = "#A855F780";
-            _chamsLootColor.Value = "#22D3EE80";
-        }
-
         private static Color ParseVisualColor(
             string value,
             Color fallback)
@@ -808,18 +473,5 @@ namespace FieldKit
             }
         }
 
-        private void DrawEspQuickInfo()
-        {
-            GUILayout.Label(
-                "ESP: " + (_enabled.Value ? "Enabled" : "Disabled"));
-            GUILayout.Label(
-                "Chams: " +
-                (_chamsEnabled.Value ? "Enabled" : "Disabled"));
-            GUILayout.Label("Tracked targets: " + _targets.Count);
-            GUILayout.Space(5f);
-            GUILayout.Label("Insert  Open menu");
-            GUILayout.Label("Home    Toggle ESP");
-            GUILayout.Label("F9      Toggle Chams");
-        }
     }
 }
