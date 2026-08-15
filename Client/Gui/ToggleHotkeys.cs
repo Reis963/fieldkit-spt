@@ -136,7 +136,7 @@ namespace FieldKit
                 : FormatToggleHotkey(hotkey.Value);
             if (GUILayout.Button(
                     label,
-                    GUI.skin.label,
+                    _hotkeyStyle,
                     GUILayout.Width(76f)))
             {
                 _toggleAwaitingHotkey = null;
@@ -169,7 +169,7 @@ namespace FieldKit
 
             if (GUILayout.Button(
                     hotkeyLabel,
-                    GUI.skin.label,
+                    _hotkeyStyle,
                     GUILayout.Width(76f)))
             {
                 if (_toggleHotkeys.ContainsKey(toggle))

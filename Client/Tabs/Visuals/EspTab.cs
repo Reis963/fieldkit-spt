@@ -8,7 +8,6 @@ namespace FieldKit
         private string _openColorLabel;
         private Color _openColorFallback;
         private GUIStyle _espRoleFoldoutStyle;
-        private Vector2 _espRoleListScroll;
 
         private void DrawEspMenu()
         {
@@ -20,13 +19,9 @@ namespace FieldKit
             BeginCategoryPanel("ESP Targets");
             DrawOptionToggle(_enabled, " Enable ESP");
             DrawColorColumnHeaders();
-            _espRoleListScroll = BeginVerticalScrollView(
-                _espRoleListScroll,
-                GUILayout.Height(260f));
             DrawAllRoleRow();
             for (int i = 0; i < _espRoleGroups.Count; i++)
                 DrawRoleGroup(_espRoleGroups[i]);
-            EndVerticalScrollView();
             DrawOptionToggle(_showBoxes, " Show Boxes");
             DrawOptionToggle(
                 _visibilityCheck, " Visibility Check");
@@ -85,8 +80,7 @@ namespace FieldKit
             int nextFontIndex = DrawDropdown(
                 "esp-font",
                 fontIndex,
-                EspFontNames,
-                "Font used for character ESP labels.");
+                EspFontNames);
             if (nextFontIndex != fontIndex)
                 _espFontName.Value = EspFontNames[nextFontIndex];
             DrawOptionSlider(
@@ -247,7 +241,7 @@ namespace FieldKit
                 : leaf;
         }
 
-        private static void DrawColorColumnHeaders()
+        private void DrawColorColumnHeaders()
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(
@@ -255,12 +249,15 @@ namespace FieldKit
                 GUILayout.ExpandWidth(true));
             GUILayout.Label(
                 "Visible",
+                _sliderValueStyle,
                 GUILayout.Width(52f));
             GUILayout.Label(
                 "Hidden",
+                _sliderValueStyle,
                 GUILayout.Width(52f));
             GUILayout.Label(
                 "Hotkey",
+                _sliderValueStyle,
                 GUILayout.Width(76f));
             GUILayout.EndHorizontal();
         }
@@ -272,14 +269,13 @@ namespace FieldKit
             string label)
         {
             Rect slot = GUILayoutUtility.GetRect(
-                52f, 24f, GUILayout.Width(52f), GUILayout.Height(24f));
+                52f, 26f, GUILayout.Width(52f), GUILayout.Height(26f));
             Rect rect = new Rect(
-                slot.x + 14f, slot.y, 24f, 24f);
+                slot.x + 13f, slot.y, 26f, 26f);
             if (GUI.Button(
                 rect,
-                new GUIContent(
-                    "",
-                    OptionDescription(setting))))
+                GUIContent.none,
+                _colorChipStyle))
             {
                 _openColorSetting = setting;
                 _openColorLabel = label;
@@ -289,7 +285,7 @@ namespace FieldKit
             Color previousColor = GUI.color;
             GUI.color = color;
             GUI.DrawTexture(
-                new Rect(rect.x + 4f, rect.y + 4f, 16f, 16f),
+                new Rect(rect.x + 5f, rect.y + 5f, 16f, 16f),
                 Texture2D.whiteTexture);
             GUI.color = previousColor;
         }
@@ -299,30 +295,67 @@ namespace FieldKit
             if (_openColorSetting == null)
                 return;
 
-            _colorPickerRect.width = 390f;
-            _colorPickerRect.height = 250f;
+            _colorPickerRect.width = 360f;
+            _colorPickerRect.height = 300f;
+            _colorPickerRect.x = Mathf.Clamp(
+                _colorPickerRect.x,
+                0f,
+                Mathf.Max(
+                    0f,
+                    VirtualScreenWidth - _colorPickerRect.width));
+            _colorPickerRect.y = Mathf.Clamp(
+                _colorPickerRect.y,
+                0f,
+                Mathf.Max(
+                    0f,
+                    VirtualScreenHeight - _colorPickerRect.height));
             _colorPickerRect = GUI.Window(
                 731909,
                 _colorPickerRect,
                 DrawColorPickerWindow,
-                "Color Picker");
+                "");
         }
 
         private void DrawColorPickerWindow(int windowId)
         {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(_openColorLabel, _sectionTitleStyle);
-            if (GUILayout.Button("Close", GUILayout.Width(64f)))
+            GUILayout.BeginHorizontal(
+                _pickerHeaderStyle,
+                GUILayout.Height(27f));
+            GUILayout.Label(
+                _openColorLabel,
+                _menuTitleStyle,
+                GUILayout.ExpandWidth(true));
+            if (GUILayout.Button(
+                    "\u00D7",
+                    _closeButtonStyle,
+                    GUILayout.Width(24f)))
                 _openColorSetting = null;
             GUILayout.EndHorizontal();
+            GUILayout.Space(8f);
 
-            if (_openColorSetting != null &&
-                DrawRgbaColorPicker(
-                    "RGBA", _openColorSetting, _openColorFallback))
-                ApplyConfiguredTargetColors();
+            if (_openColorSetting != null)
+            {
+                if (DrawRgbaColorPicker(
+                        "RGBA", _openColorSetting, _openColorFallback))
+                    ApplyConfiguredTargetColors();
+
+                GUILayout.FlexibleSpace();
+                GUILayout.BeginHorizontal();
+                GUILayout.FlexibleSpace();
+                if (GUILayout.Button(
+                        "Reset color",
+                        GUILayout.Width(104f)))
+                {
+                    _openColorSetting.Value = "#" +
+                        ColorUtility.ToHtmlStringRGBA(
+                            _openColorFallback);
+                    ApplyConfiguredTargetColors();
+                }
+                GUILayout.EndHorizontal();
+            }
 
             GUI.DragWindow(
-                new Rect(0f, 0f, _colorPickerRect.width, 24f));
+                new Rect(0f, 0f, _colorPickerRect.width - 28f, 29f));
         }
 
         private bool DrawRgbaColorPicker(
@@ -332,7 +365,8 @@ namespace FieldKit
         {
             Color color = ParseVisualColor(setting.Value, fallback);
             GUILayout.Label(
-                label + "  #" + ColorUtility.ToHtmlStringRGBA(color));
+                label + "  #" + ColorUtility.ToHtmlStringRGBA(color),
+                _sectionTitleStyle);
 
             Rect preview = GUILayoutUtility.GetRect(
                 1f, 16f, GUILayout.ExpandWidth(true));
@@ -341,10 +375,10 @@ namespace FieldKit
             GUI.DrawTexture(preview, Texture2D.whiteTexture);
             GUI.color = previousColor;
 
-            float red = DrawColorChannel("R", color.r);
-            float green = DrawColorChannel("G", color.g);
-            float blue = DrawColorChannel("B", color.b);
-            float alpha = DrawColorChannel("A", color.a);
+            float red = DrawColorChannel("Red", color.r);
+            float green = DrawColorChannel("Green", color.g);
+            float blue = DrawColorChannel("Blue", color.b);
+            float alpha = DrawColorChannel("Alpha", color.a);
             Color updated = new Color(red, green, blue, alpha);
 
             if (ApproximatelyEqual(color, updated))
@@ -354,15 +388,19 @@ namespace FieldKit
             return true;
         }
 
-        private static float DrawColorChannel(string label, float value)
+        private float DrawColorChannel(string label, float value)
         {
-            GUILayout.BeginHorizontal();
+            GUILayout.BeginHorizontal(GUILayout.Height(18f));
+            GUILayout.Label(label, GUILayout.ExpandWidth(true));
             GUILayout.Label(
-                label + " " + Mathf.RoundToInt(value * 255f),
+                Mathf.RoundToInt(value * 255f).ToString(),
+                _sliderValueStyle,
                 GUILayout.Width(48f));
-            value = GUILayout.HorizontalSlider(value, 0f, 1f);
             GUILayout.EndHorizontal();
-            return value;
+            return DrawStyledSlider(
+                value,
+                0f,
+                1f);
         }
 
         private static bool ApproximatelyEqual(Color left, Color right)

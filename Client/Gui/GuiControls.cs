@@ -3,15 +3,6 @@ namespace FieldKit
 {
     public sealed partial class Plugin
     {
-        private static string OptionDescription<T>(
-            BepInEx.Configuration.ConfigEntry<T> setting)
-        {
-            return setting != null &&
-                   setting.Description != null
-                ? setting.Description.Description
-                : "";
-        }
-
         private bool DrawOptionToggle(
             BepInEx.Configuration.ConfigEntry<bool> setting,
             string label,
@@ -31,7 +22,7 @@ namespace FieldKit
         {
             setting.Value = GUILayout.Toggle(
                 setting.Value,
-                new GUIContent(label, OptionDescription(setting)),
+                label,
                 options);
             return setting.Value;
         }
@@ -51,7 +42,7 @@ namespace FieldKit
             return GUILayout.BeginScrollView(
                 position,
                 false,
-                true,
+                false,
                 GUIStyle.none,
                 GUI.skin.verticalScrollbar,
                 GUI.skin.scrollView,
@@ -60,7 +51,7 @@ namespace FieldKit
 
         private void EndVerticalScrollView()
         {
-            GUILayout.Space(12f);
+            GUILayout.Space(6f);
             GUILayout.EndScrollView();
         }
 
@@ -71,27 +62,26 @@ namespace FieldKit
             float maximum,
             string format)
         {
-            string description = OptionDescription(setting);
             string displayValue = format.EndsWith(
                     "%",
                     System.StringComparison.Ordinal)
                 ? setting.Value.ToString(
                       format.Substring(0, format.Length - 1)) + "%"
                 : setting.Value.ToString(format);
-            GUILayout.BeginHorizontal(GUILayout.Height(26f));
+            GUILayout.BeginHorizontal(GUILayout.Height(18f));
             GUILayout.Label(
-                new GUIContent(label, description),
-                GUILayout.Width(170f));
-            setting.Value = GUILayout.HorizontalSlider(
-                setting.Value,
-                minimum,
-                maximum,
+                label,
                 GUILayout.ExpandWidth(true));
             GUILayout.Label(
-                new GUIContent(displayValue, description),
+                displayValue,
                 _sliderValueStyle,
-                GUILayout.Width(76f));
+                GUILayout.Width(64f));
             GUILayout.EndHorizontal();
+            setting.Value = DrawStyledSlider(
+                setting.Value,
+                minimum,
+                maximum);
+            GUILayout.Space(2f);
         }
 
         private void DrawOptionSlider(
@@ -101,80 +91,76 @@ namespace FieldKit
             int maximum,
             string format)
         {
-            string description = OptionDescription(setting);
-            GUILayout.BeginHorizontal(GUILayout.Height(26f));
+            GUILayout.BeginHorizontal(GUILayout.Height(18f));
             GUILayout.Label(
-                new GUIContent(label, description),
-                GUILayout.Width(170f));
+                label,
+                GUILayout.ExpandWidth(true));
+            GUILayout.Label(
+                setting.Value.ToString(format),
+                _sliderValueStyle,
+                GUILayout.Width(64f));
+            GUILayout.EndHorizontal();
             setting.Value = Mathf.RoundToInt(
-                GUILayout.HorizontalSlider(
+                DrawStyledSlider(
                     setting.Value,
                     minimum,
-                    maximum,
-                    GUILayout.ExpandWidth(true)));
-            GUILayout.Label(
-                new GUIContent(
-                    setting.Value.ToString(format),
-                    description),
-                _sliderValueStyle,
-                GUILayout.Width(76f));
-            GUILayout.EndHorizontal();
+                    maximum));
+            GUILayout.Space(2f);
         }
 
-        private void DrawOptionTooltip()
+        private float DrawStyledSlider(
+            float value,
+            float minimum,
+            float maximum)
         {
-            if (_optionTooltipStyle == null ||
-                Event.current.type != EventType.Repaint)
-                return;
-
-            string tooltip = GUI.tooltip;
-            if (string.IsNullOrEmpty(tooltip))
+            Rect sliderRect = GUILayoutUtility.GetRect(
+                1f,
+                20f,
+                GUILayout.ExpandWidth(true),
+                GUILayout.Height(20f));
+            Rect trackRect = new Rect(
+                sliderRect.x + 2f,
+                sliderRect.y + 7f,
+                Mathf.Max(1f, sliderRect.width - 4f),
+                6f);
+            float normalized = Mathf.InverseLerp(
+                minimum,
+                maximum,
+                value);
+            if (Event.current.type == EventType.Repaint)
             {
-                _pendingOptionTooltip = null;
-                _optionTooltipHoverStarted = 0f;
-                return;
+                Color previous = GUI.color;
+                if (!GUI.enabled)
+                    GUI.color = new Color(1f, 1f, 1f, 0.45f);
+                if (_sliderBaseTexture != null)
+                    GUI.DrawTexture(trackRect, _sliderBaseTexture);
+                if (_sliderFillTexture != null && normalized > 0f)
+                {
+                    GUI.DrawTexture(
+                        new Rect(
+                            trackRect.x,
+                            trackRect.y,
+                            trackRect.width * normalized,
+                            trackRect.height),
+                        _sliderFillTexture);
+                }
+                GUI.color = previous;
             }
 
-            if (!string.Equals(
-                    tooltip,
-                    _pendingOptionTooltip,
-                    System.StringComparison.Ordinal))
-            {
-                _pendingOptionTooltip = tooltip;
-                _optionTooltipHoverStarted = Time.unscaledTime;
-                return;
-            }
-
-            if (Time.unscaledTime - _optionTooltipHoverStarted < 1f)
-                return;
-
-            const float maximumWidth = 360f;
-            GUIContent content = new GUIContent(tooltip);
-            float width = Mathf.Min(
-                maximumWidth,
-                Mathf.Max(
-                    180f,
-                    _optionTooltipStyle.CalcSize(content).x));
-            float height = _optionTooltipStyle.CalcHeight(
-                content, width);
-            Vector2 mouse = Event.current.mousePosition;
-            Rect rect = new Rect(
-                mouse.x + 16f,
-                mouse.y + 18f,
-                width,
-                height);
-            rect.x = Mathf.Clamp(
-                rect.x, 4f, Mathf.Max(4f, _menuRect.width - width - 4f));
-            rect.y = Mathf.Clamp(
-                rect.y, 28f, Mathf.Max(28f, _menuRect.height - height - 4f));
-            GUI.Label(rect, content, _optionTooltipStyle);
+            value = GUI.HorizontalSlider(
+                sliderRect,
+                value,
+                minimum,
+                maximum,
+                GUIStyle.none,
+                GUI.skin.horizontalSliderThumb);
+            return value;
         }
 
         private int DrawDropdown(
             string id,
             int selectedIndex,
-            string[] options,
-            string tooltip = "")
+            string[] options)
         {
             selectedIndex = Mathf.Clamp(
                 selectedIndex,
@@ -182,7 +168,7 @@ namespace FieldKit
                 options.Length - 1);
 
             bool clicked = GUILayout.Button(
-                new GUIContent(options[selectedIndex], tooltip),
+                options[selectedIndex],
                 _dropdownButtonStyle);
             Rect anchor = GUILayoutUtility.GetLastRect();
             GUI.Label(

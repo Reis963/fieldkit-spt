@@ -117,6 +117,9 @@ namespace FieldKit
                 return;
 
             string roleKey = GetRoleKey(player);
+            if (IsExcludedEspRoleKey(roleKey))
+                return;
+
             EspRoleSettings roleSettings = GetRoleSettings(roleKey);
             string name = "Unknown";
 

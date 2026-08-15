@@ -11,11 +11,11 @@ namespace FieldKit
             "Other"
         };
 
-        private const float PreferredMenuWidth = 880f;
-        private const float PreferredMenuHeight = 660f;
-        private const float MinimumMenuWidth = 700f;
-        private const float MinimumMenuHeight = 500f;
-        private const float MenuSidebarWidth = 152f;
+        private const float PreferredMenuWidth = 820f;
+        private const float PreferredMenuHeight = 620f;
+        private const float MinimumMenuWidth = 660f;
+        private const float MinimumMenuHeight = 480f;
+        private const float MenuSidebarWidth = 146f;
         private float MaximumMenuScale =>
             Mathf.Max(
                 0.5f,
@@ -49,7 +49,7 @@ namespace FieldKit
                 Mathf.Min(MinimumMenuHeight, VirtualScreenHeight),
                 PreferredMenuHeight);
         private float MenuColumnWidth =>
-            Mathf.Max(420f, MenuWidth - MenuSidebarWidth - 58f);
+            Mathf.Max(420f, MenuWidth - MenuSidebarWidth - 50f);
         private float MenuContentHeight =>
             Mathf.Max(300f, MenuHeight - 84f);
         private ConfigEntry<float> _menuWindowX;
@@ -57,6 +57,7 @@ namespace FieldKit
         private ConfigEntry<float> _colorPickerWindowX;
         private ConfigEntry<float> _colorPickerWindowY;
         private ConfigEntry<string> _guiPrimaryColor;
+        private ConfigEntry<int> _guiDesignVersion;
         private ConfigEntry<int> _savedMenuTab;
         private int _menuTab;
         private bool _menuOpen;
@@ -82,7 +83,6 @@ namespace FieldKit
         private GUIStyle _sidebarStyle;
         private GUIStyle _sidebarHeaderStyle;
         private GUIStyle _contentPaneStyle;
-        private GUIStyle _pageTitleStyle;
         private GUIStyle _closeButtonStyle;
         private GUIStyle _sliderValueStyle;
         private GUIStyle _sectionTitleStyle;
@@ -91,9 +91,13 @@ namespace FieldKit
         private GUIStyle _dropdownArrowStyle;
         private GUIStyle _dropdownMenuStyle;
         private GUIStyle _dropdownItemStyle;
-        private GUIStyle _optionTooltipStyle;
-        private string _pendingOptionTooltip;
-        private float _optionTooltipHoverStarted;
+        private GUIStyle _sectionPanelStyle;
+        private GUIStyle _hotkeyStyle;
+        private GUIStyle _colorChipStyle;
+        private GUIStyle _pickerHeaderStyle;
+        private Texture2D _dividerTexture;
+        private Texture2D _sliderBaseTexture;
+        private Texture2D _sliderFillTexture;
         private bool _categoryResetRequested;
         private string _openDropdownId;
         private Rect _colorPickerRect =
@@ -215,8 +219,21 @@ namespace FieldKit
                 "GUI Layout", "Color Picker Y", 270f,
                 "Saved vertical position of the color picker.");
             _guiPrimaryColor = Config.Bind(
-                "GUI Appearance", "Primary Color", "#78CFF5FF",
+                "GUI Appearance", "Primary Color", "#18D7A4FF",
                 "Primary RGBA accent color used by the FieldKit menu.");
+            _guiDesignVersion = Config.Bind(
+                "GUI Appearance", "Design Version", 0,
+                "Internal version of the FieldKit interface design.");
+            if (_guiDesignVersion.Value < 1)
+            {
+                if (string.Equals(
+                        _guiPrimaryColor.Value,
+                        "#78CFF5FF",
+                        StringComparison.OrdinalIgnoreCase))
+                    _guiPrimaryColor.Value = "#18D7A4FF";
+                _guiDesignVersion.Value = 1;
+                Config.Save();
+            }
             _guiPrimaryColor.SettingChanged +=
                 OnGuiPrimaryColorChanged;
             _savedMenuTab = Config.Bind(
@@ -241,25 +258,28 @@ namespace FieldKit
         {
             GUILayout.BeginHorizontal(
                 _menuHeaderStyle,
-                GUILayout.Height(30f));
-            GUILayout.Label("FieldKit", _menuTitleStyle);
+                GUILayout.Height(28f));
             GUILayout.Label(
-                "Developer Tools for SPT",
+                "\u25BC",
                 _menuSubtitleStyle,
+                GUILayout.Width(18f));
+            GUILayout.Label(
+                "FieldKit",
+                _menuTitleStyle,
                 GUILayout.ExpandWidth(true));
             if (GUILayout.Button(
-                    new GUIContent("×", "Close menu"),
+                    "×",
                     _closeButtonStyle))
                 SetMenuOpen(false);
             GUILayout.EndHorizontal();
 
-            GUILayout.Space(6f);
+            GUILayout.Space(3f);
             GUILayout.BeginHorizontal(GUILayout.ExpandHeight(true));
             GUILayout.BeginVertical(
                 _sidebarStyle,
                 GUILayout.Width(MenuSidebarWidth),
                 GUILayout.ExpandHeight(true));
-            GUILayout.Label("NAVIGATION", _sidebarHeaderStyle);
+            GUILayout.Space(5f);
             for (int i = 0; i < MenuTabs.Length; i++)
             {
                 GUIStyle style = i == _menuTab
@@ -273,15 +293,16 @@ namespace FieldKit
                 CloseDropdown();
             }
             GUILayout.FlexibleSpace();
+            GUILayout.Label("FIELDKIT", _sidebarHeaderStyle);
             GUILayout.Label("SPT 4.0.13", _sidebarHeaderStyle);
             GUILayout.EndVertical();
 
-            GUILayout.Space(8f);
+            GUILayout.Space(4f);
             GUILayout.BeginVertical(
                 _contentPaneStyle,
                 GUILayout.ExpandWidth(true),
                 GUILayout.ExpandHeight(true));
-            GUILayout.Label(MenuTabs[_menuTab], _pageTitleStyle);
+            GUILayout.Space(4f);
 
             switch (_menuTab)
             {
@@ -301,8 +322,7 @@ namespace FieldKit
             GUILayout.EndVertical();
             GUILayout.EndHorizontal();
 
-            DrawOptionTooltip();
-            GUI.DragWindow(new Rect(0f, 0f, _menuRect.width - 38f, 36f));
+            GUI.DragWindow(new Rect(0f, 0f, _menuRect.width - 34f, 31f));
         }
 
         private void UpdateMenuGeometry()
@@ -344,7 +364,7 @@ namespace FieldKit
             bool showResetButton = true)
         {
             GUILayout.BeginVertical(
-                GUI.skin.box,
+                _sectionPanelStyle,
                 GUILayout.Width(MenuColumnWidth));
             _categoryResetRequested = false;
 
@@ -356,12 +376,14 @@ namespace FieldKit
             if (showResetButton)
             {
                 _categoryResetRequested = GUILayout.Button(
-                    new GUIContent("\u21BB", "Reset group"),
+                    "\u21BB",
                     _resetButtonStyle,
                     GUILayout.Width(28f),
                     GUILayout.Height(28f));
             }
             GUILayout.EndHorizontal();
+            DrawSectionDivider();
+            GUILayout.Space(3f);
         }
 
         private static void EndCategoryPanel()
@@ -374,6 +396,18 @@ namespace FieldKit
             bool resetRequested = _categoryResetRequested;
             _categoryResetRequested = false;
             return resetRequested;
+        }
+
+        private void DrawSectionDivider()
+        {
+            Rect divider = GUILayoutUtility.GetRect(
+                1f,
+                1f,
+                GUILayout.ExpandWidth(true),
+                GUILayout.Height(1f));
+            if (Event.current.type == EventType.Repaint &&
+                _dividerTexture != null)
+                GUI.DrawTexture(divider, _dividerTexture);
         }
 
         private void PersistGuiLayout()

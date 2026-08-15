@@ -16,8 +16,7 @@ namespace FieldKit
             int nextMenuFontIndex = DrawDropdown(
                 "menu-font",
                 menuFontIndex,
-                EspFontNames,
-                "Font used by the FieldKit menu.");
+                EspFontNames);
             if (nextMenuFontIndex != menuFontIndex)
                 _menuFontName.Value =
                     EspFontNames[nextMenuFontIndex];
@@ -27,12 +26,17 @@ namespace FieldKit
                 _pendingMenuUiScale,
                 0.5f,
                 maximumUiScale);
+            GUILayout.BeginHorizontal(GUILayout.Height(18f));
             GUILayout.Label(
-                "UI scale: " +
-                _pendingMenuUiScale.ToString("0.0") +
-                "x (screen max " +
-                maximumUiScale.ToString("0.00") + "x)");
-            _pendingMenuUiScale = GUILayout.HorizontalSlider(
+                "UI scale (max " +
+                maximumUiScale.ToString("0.00") + "x)",
+                GUILayout.ExpandWidth(true));
+            GUILayout.Label(
+                _pendingMenuUiScale.ToString("0.0") + "x",
+                _sliderValueStyle,
+                GUILayout.Width(64f));
+            GUILayout.EndHorizontal();
+            _pendingMenuUiScale = DrawStyledSlider(
                 _pendingMenuUiScale,
                 0.5f,
                 maximumUiScale);
@@ -53,8 +57,8 @@ namespace FieldKit
                 _guiPrimaryColor,
                 ParseVisualColor(
                     _guiPrimaryColor.Value,
-                    new Color32(120, 207, 245, 255)),
-                new Color32(120, 207, 245, 255),
+                    new Color32(24, 215, 164, 255)),
+                new Color32(24, 215, 164, 255),
                 "Menu primary color");
             DrawHotkeyColumnSpacer();
             GUILayout.EndHorizontal();
@@ -68,7 +72,7 @@ namespace FieldKit
 
             if (DrawResetGroupButton())
             {
-                _guiPrimaryColor.Value = "#78CFF5FF";
+                _guiPrimaryColor.Value = "#18D7A4FF";
                 _menuFontName.Value = "Segoe UI";
                 _menuUiScale.Value = 1f;
                 _pendingMenuUiScale = 1f;

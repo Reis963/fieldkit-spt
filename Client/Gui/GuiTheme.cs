@@ -8,18 +8,19 @@ namespace FieldKit
             if (_adminSkin != null)
                 return;
 
-            Color32 window = new Color32(17, 21, 28, 255);
-            Color32 surface = new Color32(18, 22, 30, 255);
-            Color32 raised = new Color32(24, 29, 39, 255);
-            Color32 hover = new Color32(32, 38, 51, 255);
-            Color32 border = new Color32(43, 50, 66, 255);
-            Color32 text = new Color32(230, 233, 240, 255);
-            Color32 muted = new Color32(137, 145, 167, 255);
+            Color32 window = new Color32(9, 12, 17, 250);
+            Color32 surface = new Color32(13, 17, 23, 247);
+            Color32 raised = new Color32(24, 43, 66, 255);
+            Color32 hover = new Color32(30, 58, 88, 255);
+            Color32 border = new Color32(31, 59, 86, 255);
+            Color32 text = new Color32(224, 229, 235, 255);
+            Color32 muted = new Color32(133, 145, 158, 255);
+            Color32 transparent = new Color32(0, 0, 0, 0);
             Color accentColor = _guiPrimaryColor == null
-                ? new Color32(120, 207, 245, 255)
+                ? new Color32(24, 215, 164, 255)
                 : ParseVisualColor(
                     _guiPrimaryColor.Value,
-                    new Color32(120, 207, 245, 255));
+                    new Color32(24, 215, 164, 255));
             Color32 accent = accentColor;
             Color32 accentHover = Color.Lerp(
                 accentColor, Color.white, 0.18f);
@@ -27,9 +28,9 @@ namespace FieldKit
                 accentColor, Color.black, 0.34f);
 
             Texture2D windowTexture =
-                CreateSolidThemeTexture(window);
+                CreateThemeTexture(window, border, 18);
             Texture2D surfaceTexture =
-                CreateThemeTexture(surface, border, 5);
+                CreateThemeTexture(surface, transparent, 14);
             Texture2D raisedTexture =
                 CreateThemeTexture(raised, border, 5);
             Texture2D hoverTexture =
@@ -54,6 +55,13 @@ namespace FieldKit
                     accentHover,
                     Color.white,
                     true);
+            Texture2D transparentTexture =
+                CreateSolidThemeTexture(transparent);
+            _dividerTexture = CreateSolidThemeTexture(
+                new Color32(45, 55, 67, 180));
+            _sliderBaseTexture = CreateSolidThemeTexture(
+                new Color32(25, 48, 70, 255));
+            _sliderFillTexture = CreateSolidThemeTexture(accent);
 
             _adminSkin = Instantiate(GUI.skin);
             _adminSkin.name = "FieldKit Skin";
@@ -69,8 +77,8 @@ namespace FieldKit
                 text,
                 accent,
                 accent);
-            _adminSkin.window.border = new RectOffset(0, 0, 0, 0);
-            _adminSkin.window.padding = new RectOffset(10, 10, 8, 10);
+            _adminSkin.window.border = new RectOffset(8, 8, 8, 8);
+            _adminSkin.window.padding = new RectOffset(8, 8, 6, 8);
             _adminSkin.window.fontSize = 14;
             _adminSkin.window.fontStyle = FontStyle.Bold;
             _adminSkin.window.alignment = TextAnchor.UpperLeft;
@@ -84,8 +92,8 @@ namespace FieldKit
                 text,
                 text);
             _adminSkin.box.border = new RectOffset(4, 4, 4, 4);
-            _adminSkin.box.padding = new RectOffset(12, 12, 9, 11);
-            _adminSkin.box.margin = new RectOffset(2, 2, 3, 4);
+            _adminSkin.box.padding = new RectOffset(8, 8, 7, 8);
+            _adminSkin.box.margin = new RectOffset(0, 0, 2, 3);
 
             ConfigureStyle(
                 _adminSkin.button,
@@ -96,9 +104,9 @@ namespace FieldKit
                 accentHover,
                 Color.white);
             _adminSkin.button.border = new RectOffset(4, 4, 4, 4);
-            _adminSkin.button.padding = new RectOffset(12, 12, 6, 6);
-            _adminSkin.button.margin = new RectOffset(3, 3, 3, 3);
-            _adminSkin.button.fixedHeight = 30f;
+            _adminSkin.button.padding = new RectOffset(10, 10, 4, 4);
+            _adminSkin.button.margin = new RectOffset(2, 2, 2, 2);
+            _adminSkin.button.fixedHeight = 26f;
 
             _adminSkin.toggle.normal.background = checkboxTexture;
             _adminSkin.toggle.normal.textColor = text;
@@ -128,7 +136,7 @@ namespace FieldKit
             _adminSkin.toggle.wordWrap = false;
             _adminSkin.toggle.fixedHeight = Mathf.Ceil(
                 Mathf.Max(
-                    26f,
+                    24f,
                     _adminSkin.toggle.CalcHeight(
                         new GUIContent("Ag"),
                         400f) + 5f));
@@ -136,7 +144,7 @@ namespace FieldKit
 
             _adminSkin.label.normal.textColor = text;
             _adminSkin.label.hover.textColor = text;
-            _adminSkin.label.fontSize = 13;
+            _adminSkin.label.fontSize = 12;
             _adminSkin.label.padding = new RectOffset(3, 3, 2, 2);
             _adminSkin.label.wordWrap = true;
 
@@ -179,9 +187,9 @@ namespace FieldKit
 
             ConfigureStyle(
                 _adminSkin.scrollView,
-                windowTexture,
-                windowTexture,
-                windowTexture,
+                transparentTexture,
+                transparentTexture,
+                transparentTexture,
                 text,
                 text,
                 text);
@@ -206,106 +214,115 @@ namespace FieldKit
                 accent);
             _adminSkin.verticalScrollbar.fixedWidth = 10f;
             _adminSkin.verticalScrollbarThumb.fixedWidth = 10f;
+            _adminSkin.verticalScrollbarUpButton.fixedHeight = 0f;
+            _adminSkin.verticalScrollbarDownButton.fixedHeight = 0f;
+            _adminSkin.verticalScrollbarUpButton.normal.background =
+                transparentTexture;
+            _adminSkin.verticalScrollbarDownButton.normal.background =
+                transparentTexture;
 
             _tabStyle = new GUIStyle(_adminSkin.button);
-            _tabStyle.fixedHeight = 32f;
+            _tabStyle.fixedHeight = 27f;
             _tabStyle.fontStyle = FontStyle.Normal;
-            _tabStyle.alignment = TextAnchor.MiddleLeft;
-            _tabStyle.padding = new RectOffset(12, 8, 4, 4);
-            _tabStyle.margin = new RectOffset(0, 0, 2, 2);
-            _tabStyle.normal.background = surfaceTexture;
+            _tabStyle.alignment = TextAnchor.MiddleCenter;
+            _tabStyle.padding = new RectOffset(8, 8, 3, 3);
+            _tabStyle.margin = new RectOffset(3, 3, 2, 2);
+            _tabStyle.normal.background = raisedTexture;
             _tabStyle.normal.textColor = text;
             _tabStyle.hover.background = hoverTexture;
-            _tabStyle.hover.textColor = accentHover;
+            _tabStyle.hover.textColor = Color.white;
             _tabStyle.active.background = raisedTexture;
             _tabStyle.active.textColor = accent;
 
             _selectedTabStyle = new GUIStyle(_tabStyle);
-            _selectedTabStyle.fontStyle = FontStyle.Bold;
-            _selectedTabStyle.normal.background = accentTexture;
-            _selectedTabStyle.normal.textColor = Color.white;
+            _selectedTabStyle.fontStyle = FontStyle.Normal;
+            _selectedTabStyle.normal.background = accentHoverTexture;
+            _selectedTabStyle.normal.textColor = new Color32(7, 18, 21, 255);
             _selectedTabStyle.hover.background = accentHoverTexture;
-            _selectedTabStyle.hover.textColor = Color.white;
+            _selectedTabStyle.hover.textColor = new Color32(7, 18, 21, 255);
             _selectedTabStyle.active.background = accentTexture;
-            _selectedTabStyle.active.textColor = Color.white;
+            _selectedTabStyle.active.textColor = new Color32(7, 18, 21, 255);
 
             _menuHeaderStyle = new GUIStyle(_adminSkin.box);
             _menuHeaderStyle.normal.background = surfaceTexture;
-            _menuHeaderStyle.padding = new RectOffset(10, 5, 2, 2);
+            _menuHeaderStyle.padding = new RectOffset(6, 3, 1, 1);
             _menuHeaderStyle.margin = new RectOffset(0, 0, 0, 0);
             _menuHeaderStyle.alignment = TextAnchor.MiddleLeft;
 
             _menuTitleStyle = new GUIStyle(_adminSkin.label);
-            _menuTitleStyle.fontStyle = FontStyle.Bold;
-            _menuTitleStyle.fontSize = 14;
-            _menuTitleStyle.normal.textColor = accent;
-            _menuTitleStyle.alignment = TextAnchor.MiddleLeft;
-            _menuTitleStyle.padding = new RectOffset(0, 8, 0, 0);
+            _menuTitleStyle.fontStyle = FontStyle.Normal;
+            _menuTitleStyle.fontSize = 12;
+            _menuTitleStyle.normal.textColor = text;
+            _menuTitleStyle.alignment = TextAnchor.MiddleCenter;
+            _menuTitleStyle.padding = new RectOffset(0, 0, 0, 0);
 
             _menuSubtitleStyle = new GUIStyle(_adminSkin.label);
             _menuSubtitleStyle.fontSize = 11;
-            _menuSubtitleStyle.normal.textColor = muted;
-            _menuSubtitleStyle.alignment = TextAnchor.MiddleLeft;
-            _menuSubtitleStyle.padding = new RectOffset(0, 0, 1, 0);
+            _menuSubtitleStyle.normal.textColor = text;
+            _menuSubtitleStyle.alignment = TextAnchor.MiddleCenter;
+            _menuSubtitleStyle.padding = new RectOffset(0, 0, 0, 0);
 
             _sidebarStyle = new GUIStyle(_adminSkin.box);
             _sidebarStyle.normal.background = surfaceTexture;
-            _sidebarStyle.padding = new RectOffset(7, 7, 8, 8);
+            _sidebarStyle.padding = new RectOffset(5, 5, 6, 6);
             _sidebarStyle.margin = new RectOffset(0, 0, 0, 0);
 
             _sidebarHeaderStyle = new GUIStyle(_adminSkin.label);
             _sidebarHeaderStyle.fontSize = 10;
             _sidebarHeaderStyle.fontStyle = FontStyle.Bold;
             _sidebarHeaderStyle.normal.textColor = muted;
-            _sidebarHeaderStyle.padding = new RectOffset(7, 0, 2, 6);
+            _sidebarHeaderStyle.alignment = TextAnchor.MiddleCenter;
+            _sidebarHeaderStyle.padding = new RectOffset(2, 2, 0, 1);
 
             _contentPaneStyle = new GUIStyle(_adminSkin.box);
-            _contentPaneStyle.normal.background = windowTexture;
+            ConfigureStyle(
+                _contentPaneStyle,
+                transparentTexture,
+                transparentTexture,
+                transparentTexture,
+                text,
+                text,
+                text);
             _contentPaneStyle.border = new RectOffset(0, 0, 0, 0);
-            _contentPaneStyle.padding = new RectOffset(5, 5, 4, 4);
+            _contentPaneStyle.padding = new RectOffset(8, 5, 4, 4);
             _contentPaneStyle.margin = new RectOffset(0, 0, 0, 0);
 
-            _pageTitleStyle = new GUIStyle(_adminSkin.label);
-            _pageTitleStyle.fontSize = 16;
-            _pageTitleStyle.fontStyle = FontStyle.Bold;
-            _pageTitleStyle.normal.textColor = text;
-            _pageTitleStyle.padding = new RectOffset(5, 0, 1, 5);
-
             _closeButtonStyle = new GUIStyle(_adminSkin.button);
-            _closeButtonStyle.fixedWidth = 26f;
-            _closeButtonStyle.fixedHeight = 24f;
-            _closeButtonStyle.fontSize = 17;
+            _closeButtonStyle.fixedWidth = 24f;
+            _closeButtonStyle.fixedHeight = 22f;
+            _closeButtonStyle.fontSize = 15;
             _closeButtonStyle.fontStyle = FontStyle.Normal;
             _closeButtonStyle.alignment = TextAnchor.MiddleCenter;
             _closeButtonStyle.padding = new RectOffset(0, 0, 0, 2);
             _closeButtonStyle.margin = new RectOffset(2, 0, 1, 1);
 
             _sliderValueStyle = new GUIStyle(_adminSkin.label);
-            _sliderValueStyle.alignment = TextAnchor.MiddleRight;
-            _sliderValueStyle.normal.textColor = muted;
+            _sliderValueStyle.alignment = TextAnchor.MiddleCenter;
+            _sliderValueStyle.normal.textColor = text;
             _sliderValueStyle.wordWrap = false;
-            _sliderValueStyle.padding = new RectOffset(5, 2, 0, 0);
+            _sliderValueStyle.padding = new RectOffset(2, 2, 0, 0);
+            _sliderValueStyle.fontSize = 10;
 
             _sectionTitleStyle = new GUIStyle(_adminSkin.label);
-            _sectionTitleStyle.normal.textColor = accent;
-            _sectionTitleStyle.fontStyle = FontStyle.Bold;
-            _sectionTitleStyle.fontSize = 13;
-            _sectionTitleStyle.margin = new RectOffset(0, 0, 0, 4);
+            _sectionTitleStyle.normal.textColor = text;
+            _sectionTitleStyle.fontStyle = FontStyle.Normal;
+            _sectionTitleStyle.fontSize = 12;
+            _sectionTitleStyle.margin = new RectOffset(0, 0, 0, 1);
 
             _resetButtonStyle = new GUIStyle(_adminSkin.button);
-            _resetButtonStyle.fixedWidth = 28f;
-            _resetButtonStyle.fixedHeight = 28f;
+            _resetButtonStyle.fixedWidth = 24f;
+            _resetButtonStyle.fixedHeight = 22f;
             _resetButtonStyle.padding = new RectOffset(0, 0, 0, 1);
             _resetButtonStyle.margin = new RectOffset(4, 0, 0, 0);
             _resetButtonStyle.alignment = TextAnchor.MiddleCenter;
-            _resetButtonStyle.fontSize = 18;
+            _resetButtonStyle.fontSize = 15;
             _resetButtonStyle.fontStyle = FontStyle.Normal;
 
             _dropdownButtonStyle = new GUIStyle(_adminSkin.button);
             _dropdownButtonStyle.alignment = TextAnchor.MiddleLeft;
             _dropdownButtonStyle.padding =
                 new RectOffset(12, 32, 5, 5);
-            _dropdownButtonStyle.fixedHeight = 32f;
+            _dropdownButtonStyle.fixedHeight = 27f;
 
             _dropdownArrowStyle = new GUIStyle(_adminSkin.label);
             _dropdownArrowStyle.alignment = TextAnchor.MiddleCenter;
@@ -319,7 +336,7 @@ namespace FieldKit
                 new RectOffset(4, 4, 4, 4);
 
             _dropdownItemStyle = new GUIStyle(_adminSkin.button);
-            _dropdownItemStyle.fixedHeight = 30f;
+            _dropdownItemStyle.fixedHeight = 26f;
             _dropdownItemStyle.margin =
                 new RectOffset(0, 0, 0, 0);
             _dropdownItemStyle.alignment = TextAnchor.MiddleLeft;
@@ -331,13 +348,35 @@ namespace FieldKit
                 accentHoverTexture;
             _dropdownItemStyle.onHover.textColor = Color.white;
 
-            _optionTooltipStyle = new GUIStyle(_adminSkin.box);
-            _optionTooltipStyle.normal.background = hoverTexture;
-            _optionTooltipStyle.normal.textColor = text;
-            _optionTooltipStyle.padding = new RectOffset(10, 10, 8, 8);
-            _optionTooltipStyle.border = new RectOffset(4, 4, 4, 4);
-            _optionTooltipStyle.wordWrap = true;
-            _optionTooltipStyle.fontSize = 12;
+            _sectionPanelStyle = new GUIStyle(_adminSkin.box);
+            ConfigureStyle(
+                _sectionPanelStyle,
+                transparentTexture,
+                transparentTexture,
+                transparentTexture,
+                text,
+                text,
+                text);
+            _sectionPanelStyle.border = new RectOffset(0, 0, 0, 0);
+            _sectionPanelStyle.padding = new RectOffset(4, 4, 4, 8);
+            _sectionPanelStyle.margin = new RectOffset(0, 0, 1, 3);
+
+            _hotkeyStyle = new GUIStyle(_adminSkin.button);
+            _hotkeyStyle.fixedHeight = 22f;
+            _hotkeyStyle.alignment = TextAnchor.MiddleCenter;
+            _hotkeyStyle.fontSize = 10;
+            _hotkeyStyle.normal.textColor = muted;
+            _hotkeyStyle.padding = new RectOffset(4, 4, 1, 1);
+            _hotkeyStyle.margin = new RectOffset(2, 2, 1, 1);
+
+            _colorChipStyle = new GUIStyle(_adminSkin.button);
+            _colorChipStyle.fixedWidth = 26f;
+            _colorChipStyle.fixedHeight = 26f;
+            _colorChipStyle.padding = new RectOffset(3, 3, 3, 3);
+            _colorChipStyle.margin = new RectOffset(2, 2, 1, 1);
+
+            _pickerHeaderStyle = new GUIStyle(_menuHeaderStyle);
+            _pickerHeaderStyle.padding = new RectOffset(7, 4, 2, 2);
         }
 
         private Texture2D CreateThemeTexture(
@@ -357,7 +396,7 @@ namespace FieldKit
             {
                 for (int x = 0; x < size; x++)
                 {
-                    const int radius = 3;
+                    int radius = size >= 18 ? 6 : 3;
                     int nearestX = Mathf.Clamp(
                         x,
                         radius,
@@ -690,7 +729,6 @@ namespace FieldKit
             _sidebarStyle = null;
             _sidebarHeaderStyle = null;
             _contentPaneStyle = null;
-            _pageTitleStyle = null;
             _closeButtonStyle = null;
             _sliderValueStyle = null;
             _sectionTitleStyle = null;
@@ -699,8 +737,15 @@ namespace FieldKit
             _dropdownArrowStyle = null;
             _dropdownMenuStyle = null;
             _dropdownItemStyle = null;
-            _optionTooltipStyle = null;
+            _sectionPanelStyle = null;
+            _hotkeyStyle = null;
+            _colorChipStyle = null;
+            _pickerHeaderStyle = null;
+            _dividerTexture = null;
+            _sliderBaseTexture = null;
+            _sliderFillTexture = null;
             _menuCursorTexture = null;
+            _espRoleFoldoutStyle = null;
 
             for (int i = 0; i < _themeTextures.Count; i++)
             {

@@ -16,6 +16,7 @@ namespace FieldKit
                 new Dictionary<string, EspRoleGroup>(
                     StringComparer.OrdinalIgnoreCase);
         private bool _espAllRolesExpanded;
+        private const int CurrentEspPaletteVersion = 1;
 
         private void ConfigureRoleEsp()
         {
@@ -25,15 +26,26 @@ namespace FieldKit
             for (int i = 0; i < roles.Length; i++)
             {
                 WildSpawnType role = (WildSpawnType)roles.GetValue(i);
+                if (IsExcludedEspRole(role) ||
+                    role == WildSpawnType.pmcBEAR ||
+                    role == WildSpawnType.pmcUSEC)
+                    continue;
+
                 EspKind kind = RoleKind(role);
                 string roleName = role.ToString();
                 AddRoleEsp(
                     "ROLE-" + roleName,
                     RoleGroupName(role) + " - " + roleName,
                     kind,
-                    roleName,
-                    IsFollowerRole(role));
+                    roleName);
             }
+
+            _espPaletteVersion = Config.Bind(
+                "ESP Palette",
+                "Preset Version",
+                0,
+                "Internal version of the applied FieldKit ESP palette.");
+            ApplyEspPaletteMigration();
         }
 
         private void AddRoleEsp(
@@ -44,11 +56,7 @@ namespace FieldKit
             bool followerSubcategory = false)
         {
             Color visible = GetRoleDefaultColor(key, kind);
-            Color hidden = new Color(
-                visible.r * 0.3f,
-                visible.g * 0.3f,
-                visible.b * 0.3f,
-                0.75f);
+            Color hidden = GetHiddenRoleDefaultColor(visible);
             EspRoleSettings settings = new EspRoleSettings
             {
                 Key = key,
@@ -110,17 +118,46 @@ namespace FieldKit
                 return "PMC";
             if (IsOrdinaryScavRole(role))
                 return "Scav";
+            if (string.Equals(name, "pmcBot",
+                    StringComparison.OrdinalIgnoreCase) ||
+                name.StartsWith("arenaFighter",
+                    StringComparison.OrdinalIgnoreCase))
+                return "Raider";
+            if (string.Equals(name, "exUsec",
+                    StringComparison.OrdinalIgnoreCase))
+                return "Rogue";
+            if (name.StartsWith("blackDiv",
+                    StringComparison.OrdinalIgnoreCase))
+                return "Black Division";
+            if (string.Equals(name, "skier",
+                    StringComparison.OrdinalIgnoreCase))
+                return "RUAF";
+            if (string.Equals(name, "peacemaker",
+                    StringComparison.OrdinalIgnoreCase))
+                return "UNTAR";
+            if (string.Equals(name, "tagillaHelperAgro",
+                    StringComparison.OrdinalIgnoreCase) ||
+                IsFollowerRole(role))
+                return "Boss Guard";
+            if (name.StartsWith("infected",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return string.Equals(name, "infectedTagilla",
+                        StringComparison.OrdinalIgnoreCase)
+                    ? "Boss"
+                    : "Infected";
+            }
             if (name.StartsWith("boss", StringComparison.OrdinalIgnoreCase))
-                return "Boss";
-            if (IsFollowerRole(role))
                 return "Boss";
             if (name.StartsWith("sect", StringComparison.OrdinalIgnoreCase))
                 return "Cultist";
-            if (name.StartsWith("infected", StringComparison.OrdinalIgnoreCase))
-                return "Infected";
-            if (name.IndexOf("pmc", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                role == WildSpawnType.exUsec)
-                return "Raider / Rogue";
+            if (string.Equals(name, "gifter",
+                    StringComparison.OrdinalIgnoreCase) ||
+                name.IndexOf("ZryachiyEvent",
+                    StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.StartsWith("spirit",
+                    StringComparison.OrdinalIgnoreCase))
+                return "Boss";
             return "Special";
         }
 
@@ -134,16 +171,142 @@ namespace FieldKit
 
         private static Color GetRoleDefaultColor(string key, EspKind kind)
         {
-            Color baseColor = GetVisualFallback(kind);
-            int hash = 17;
-            for (int i = 0; i < key.Length; i++)
-                hash = unchecked(hash * 31 + key[i]);
-            float shift = ((hash & 255) / 255f - 0.5f) * 0.16f;
-            return new Color(
-                Mathf.Clamp01(baseColor.r + shift),
-                Mathf.Clamp01(baseColor.g - shift * 0.5f),
-                Mathf.Clamp01(baseColor.b + shift * 0.35f),
-                1f);
+            if (string.Equals(key, "PMC-BEAR",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, "ROLE-pmcBEAR",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0x34, 0x98, 0xDB);
+            if (string.Equals(key, "PMC-USEC",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(key, "ROLE-pmcUSEC",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0x2E, 0xCC, 0x71);
+
+            string roleName = key.StartsWith(
+                    "ROLE-", StringComparison.OrdinalIgnoreCase)
+                ? key.Substring(5)
+                : key;
+            if (IsOrdinaryScavRoleName(roleName))
+                return PaletteColor(0xFF, 0xD4, 0x3B);
+            if (string.Equals(roleName, "pmcBot",
+                    StringComparison.OrdinalIgnoreCase) ||
+                roleName.StartsWith("arenaFighter",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0x9B, 0x59, 0xB6);
+            if (string.Equals(roleName, "exUsec",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0x00, 0xBC, 0xD4);
+            if (roleName.StartsWith("blackDiv",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0xF2, 0xF2, 0xF2);
+            if (string.Equals(roleName, "skier",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0xA0, 0x52, 0x52);
+            if (string.Equals(roleName, "peacemaker",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0x3F, 0x51, 0xB5);
+            if (roleName.StartsWith("sect",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0x61, 0x61, 0x61);
+            if (roleName.StartsWith("infected",
+                    StringComparison.OrdinalIgnoreCase) &&
+                !string.Equals(roleName, "infectedTagilla",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0x8B, 0xC3, 0x4A);
+            if (roleName.StartsWith("follower",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(roleName, "tagillaHelperAgro",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0xFF, 0x8C, 0x00);
+            if (roleName.StartsWith("boss",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(roleName, "gifter",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(roleName, "infectedTagilla",
+                    StringComparison.OrdinalIgnoreCase) ||
+                roleName.IndexOf("ZryachiyEvent",
+                    StringComparison.OrdinalIgnoreCase) >= 0 ||
+                roleName.StartsWith("spirit",
+                    StringComparison.OrdinalIgnoreCase))
+                return PaletteColor(0xF4, 0x43, 0x36);
+
+            // Reserved for technical/test roles and any role introduced by a
+            // future SPT update that does not yet have a semantic category.
+            return PaletteColor(0xE9, 0x1E, 0x63);
+        }
+
+        private static bool IsOrdinaryScavRoleName(string roleName)
+        {
+            return string.Equals(roleName, "assault",
+                       StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(roleName, "marksman",
+                       StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(roleName, "cursedAssault",
+                       StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(roleName, "assaultGroup",
+                       StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(roleName, "crazyAssaultEvent",
+                       StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static Color PaletteColor(byte red, byte green, byte blue)
+        {
+            return new Color32(red, green, blue, 0xFF);
+        }
+
+        private static Color GetHiddenRoleDefaultColor(Color visible)
+        {
+            Color hidden = new Color(
+                visible.r * 0.45f,
+                visible.g * 0.45f,
+                visible.b * 0.45f,
+                0.75f);
+            float brightest = Mathf.Max(
+                hidden.r, Mathf.Max(hidden.g, hidden.b));
+            if (brightest > 0f && brightest < 0.18f)
+            {
+                float lift = 0.18f / brightest;
+                hidden.r = Mathf.Clamp01(hidden.r * lift);
+                hidden.g = Mathf.Clamp01(hidden.g * lift);
+                hidden.b = Mathf.Clamp01(hidden.b * lift);
+            }
+            return hidden;
+        }
+
+        private static bool IsExcludedEspRole(WildSpawnType role)
+        {
+            return string.Equals(
+                role.ToString(),
+                "shooterBTR",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsExcludedEspRoleKey(string roleKey)
+        {
+            return string.Equals(
+                roleKey,
+                "ROLE-shooterBTR",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private void ApplyEspPaletteMigration()
+        {
+            if (_espPaletteVersion.Value >= CurrentEspPaletteVersion)
+                return;
+
+            for (int i = 0; i < _espRoles.Count; i++)
+            {
+                EspRoleSettings role = _espRoles[i];
+                role.VisibleColor.Value =
+                    "#" + ColorUtility.ToHtmlStringRGBA(
+                        role.DefaultVisible);
+                role.HiddenColor.Value =
+                    "#" + ColorUtility.ToHtmlStringRGBA(
+                        role.DefaultHidden);
+            }
+
+            _espPaletteVersion.Value = CurrentEspPaletteVersion;
+            Config.Save();
         }
 
         private string GetRoleKey(Player player)
@@ -155,7 +318,7 @@ namespace FieldKit
                 {
                     WildSpawnType role =
                         player.Profile.Info.Settings.Role;
-                    return "ROLE-" + role;
+                    return GetConfiguredRoleKey(role);
                 }
             }
             catch { }
@@ -165,9 +328,20 @@ namespace FieldKit
                 return "PMC-USEC";
             try
             {
-                return "ROLE-" + player.Profile.Info.Settings.Role;
+                return GetConfiguredRoleKey(
+                    player.Profile.Info.Settings.Role);
             }
             catch { return "ROLE-assault"; }
+        }
+
+        private static string GetConfiguredRoleKey(
+            WildSpawnType role)
+        {
+            if (role == WildSpawnType.pmcBEAR)
+                return "PMC-BEAR";
+            if (role == WildSpawnType.pmcUSEC)
+                return "PMC-USEC";
+            return "ROLE-" + role;
         }
 
         private static bool IsRuntimeBoss(BotOwner owner)
@@ -203,6 +377,10 @@ namespace FieldKit
 
         private bool ShouldShow(Target target)
         {
+            if (target != null &&
+                IsExcludedEspRoleKey(target.RoleKey))
+                return false;
+
             EspRoleSettings settings = GetRoleSettings(target.RoleKey);
             return settings != null
                 ? settings.Enabled.Value

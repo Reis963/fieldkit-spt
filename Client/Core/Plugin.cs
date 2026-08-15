@@ -24,6 +24,7 @@ namespace FieldKit
         private ConfigEntry<bool> _showWeapon;
         private ConfigEntry<bool> _showDistance;
         private ConfigEntry<bool> _cameraDebug;
+        private ConfigEntry<int> _espPaletteVersion;
         private ConfigEntry<float> _scopeColorBrightness;
         private ConfigEntry<string> _pmcVisualColor;
         private ConfigEntry<string> _scavVisualColor;
