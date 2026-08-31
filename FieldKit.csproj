@@ -8,10 +8,8 @@
     <Description>In-raid administration and testing utilities for SPT users and mod developers.</Description>
     <Nullable>disable</Nullable>
     <Authors>Hysocs</Authors>
-    <Copyright></Copyright>
-    <AssemblyVersion>1.2.0</AssemblyVersion>
+    <AssemblyVersion>1.3.0</AssemblyVersion>
     <FileVersion>$(AssemblyVersion)</FileVersion>
-    <Configurations>Debug;Release;Package</Configurations>
     <Version>$(AssemblyVersion)</Version>
     <LangVersion>latest</LangVersion>
     <FileAlignment>512</FileAlignment>
@@ -20,17 +18,20 @@
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <FieldKitForceRebuildDir>$(MSBuildProjectDirectory)\obj\$(Configuration)\$(TargetFramework)</FieldKitForceRebuildDir>
     <FieldKitForceRebuildFile>$(FieldKitForceRebuildDir)\FieldKit.ForceRebuild.g.cs</FieldKitForceRebuildFile>
-    <FieldKitReferenceRoot>$(MSBuildProjectDirectory)\.references\client</FieldKitReferenceRoot>
+    <FieldKitBepInExReferenceRoot>$(MSBuildProjectDirectory)\references\Bepinex</FieldKitBepInExReferenceRoot>
+    <FieldKitTarkovReferenceRoot>$(MSBuildProjectDirectory)\references\Tarkov</FieldKitTarkovReferenceRoot>
   </PropertyGroup>
 
+  <ItemDefinitionGroup>
+    <Reference>
+      <Private>False</Private>
+    </Reference>
+  </ItemDefinitionGroup>
+
   <ItemGroup>
-    <Compile Include="$(FieldKitForceRebuildFile)"
-             AutoGen="true"
-             DesignTime="false"
-             Visible="false" />
+    <Compile Include="$(FieldKitForceRebuildFile)" AutoGen="true" DesignTime="false" Visible="false" />
     <EmbeddedResource Include="THIRD_PARTY_NOTICES.md" />
-    <None Update="THIRD_PARTY_NOTICES.md"
-          CopyToOutputDirectory="PreserveNewest" />
+    <None Update="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -52,67 +53,51 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="ServerMod\**\*.cs" />
     <Reference Include="PhysicsModule">
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.PhysicsModule.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\UnityEngine.PhysicsModule.dll</HintPath>
     </Reference>
     <Reference Include="0Harmony">
-      <HintPath>$(FieldKitReferenceRoot)\0Harmony.dll</HintPath>
+      <HintPath>$(FieldKitBepInExReferenceRoot)\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="Assembly-CSharp">
-      <HintPath>$(FieldKitReferenceRoot)\Assembly-CSharp.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">
-      <HintPath>$(FieldKitReferenceRoot)\BepInEx.dll</HintPath>
+      <HintPath>$(FieldKitBepInExReferenceRoot)\BepInEx.dll</HintPath>
     </Reference>
     <Reference Include="Comfort">
-      <HintPath>$(FieldKitReferenceRoot)\Comfort.dll</HintPath>
-    </Reference>
-    <Reference Include="Comfort.Unity, Version=1.0.0.4, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(FieldKitReferenceRoot)\Comfort.Unity.dll</HintPath>
-    </Reference>
-    <Reference Include="DissonanceVoip">
-      <HintPath>$(FieldKitReferenceRoot)\DissonanceVoip.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\Comfort.dll</HintPath>
     </Reference>
     <Reference Include="Sirenix.Serialization, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(FieldKitReferenceRoot)\Sirenix.Serialization.dll</HintPath>
-    </Reference>
-    <Reference Include="Unity.TextMeshPro, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(FieldKitReferenceRoot)\Unity.TextMeshPro.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\Sirenix.Serialization.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine">
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.AssetBundleModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.AssetBundleModule.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\UnityEngine.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.AnimationModule">
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.AnimationModule.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\UnityEngine.AnimationModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.CoreModule">
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.CoreModule.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\UnityEngine.CoreModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.IMGUIModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.IMGUIModule.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\UnityEngine.IMGUIModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.InputLegacyModule">
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\UnityEngine.InputLegacyModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.TextRenderingModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\UnityEngine.TextRenderingModule.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UI, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.UI.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\UnityEngine.UI.dll</HintPath>
     </Reference>
     <Reference Include="UnityEngine.UIModule">
-      <HintPath>$(FieldKitReferenceRoot)\UnityEngine.UIModule.dll</HintPath>
+      <HintPath>$(FieldKitTarkovReferenceRoot)\UnityEngine.UIModule.dll</HintPath>
     </Reference>
   </ItemGroup>
 
@@ -120,27 +105,16 @@
     <FieldKitClientInstallDir>$(MSBuildProjectDirectory)\..\..\BepInEx\plugins\Hysocs-FieldKit</FieldKitClientInstallDir>
   </PropertyGroup>
 
-  <Target Name="DeployFieldKitClient"
-          AfterTargets="Build"
-          Condition="'$(SkipDeploy)' != 'true'">
+  <Target Name="DeployFieldKitClient" AfterTargets="Build" Condition="'$(SkipDeploy)' != 'true'">
     <MakeDir Directories="$(FieldKitClientInstallDir)" />
-    <Copy SourceFiles="$(TargetPath)"
-          DestinationFolder="$(FieldKitClientInstallDir)"
-          SkipUnchangedFiles="false" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\THIRD_PARTY_NOTICES.md"
-          DestinationFolder="$(FieldKitClientInstallDir)"
-          SkipUnchangedFiles="true" />
-    <Message Importance="high"
-             Text="FieldKit client deployed: $(FieldKitClientInstallDir)\$(TargetFileName)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(FieldKitClientInstallDir)" SkipUnchangedFiles="false" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\THIRD_PARTY_NOTICES.md" DestinationFolder="$(FieldKitClientInstallDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="FieldKit client deployed: $(FieldKitClientInstallDir)\$(TargetFileName)" />
   </Target>
 
-  <Target Name="ForceFieldKitClientRebuild"
-          BeforeTargets="CoreCompile"
-          Condition="'$(SkipForceRebuild)' != 'true'">
+  <Target Name="ForceFieldKitClientRebuild" BeforeTargets="CoreCompile" Condition="'$(SkipForceRebuild)' != 'true'">
     <MakeDir Directories="$(FieldKitForceRebuildDir)" />
-    <Touch Files="$(FieldKitForceRebuildFile)"
-           AlwaysCreate="true"
-           ForceTouch="true" />
+    <Touch Files="$(FieldKitForceRebuildFile)" AlwaysCreate="true" ForceTouch="true" />
   </Target>
 
 </Project>

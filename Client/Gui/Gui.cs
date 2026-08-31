@@ -294,7 +294,7 @@ namespace FieldKit
             }
             GUILayout.FlexibleSpace();
             GUILayout.Label("FIELDKIT", _sidebarHeaderStyle);
-            GUILayout.Label("SPT 4.0.13", _sidebarHeaderStyle);
+            GUILayout.Label("SPT 4.1.3", _sidebarHeaderStyle);
             GUILayout.EndVertical();
 
             GUILayout.Space(4f);

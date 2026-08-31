@@ -344,29 +344,6 @@ namespace FieldKit
             return "ROLE-" + role;
         }
 
-        private static bool IsRuntimeBoss(BotOwner owner)
-        {
-            return owner != null &&
-                   owner.Boss != null &&
-                   owner.Boss.IamBoss;
-        }
-
-        private static bool IsRuntimeFollower(BotOwner owner)
-        {
-            if (owner == null || IsRuntimeBoss(owner))
-                return false;
-            try
-            {
-                return owner.IsFollower() ||
-                       (owner.BotFollower != null &&
-                        owner.BotFollower.HaveBoss);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
         private EspRoleSettings GetRoleSettings(string key)
         {
             EspRoleSettings settings;

@@ -18,7 +18,7 @@ namespace FieldKit
                 MethodInfo damageReactionMethod =
                     AccessTools.Method(
                         typeof(EffectsController),
-                        "method_7",
+                        nameof(EffectsController.OnPlayerDamaged),
                         new[]
                         {
                             typeof(float),

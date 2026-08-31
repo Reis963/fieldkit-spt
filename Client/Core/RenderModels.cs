@@ -70,8 +70,6 @@ namespace FieldKit
             public Player Player;
             public Transform Root;
             public IHealthController HealthController;
-            public Action<EBodyPart, float, DamageInfoStruct>
-                HealthChangedHandler;
             public EspKind Kind;
             public string RoleKey;
             public string RoleLabel;
@@ -85,6 +83,7 @@ namespace FieldKit
             public float NextVisibilityUpdate;
             public float NextScreenCheck;
             public float NextRuntimeRefresh;
+            public float NextHealthUpdate;
             public float HealthRatio;
             public bool HealthDirty;
             public bool IsAlive;

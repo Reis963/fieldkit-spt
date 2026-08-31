@@ -8,8 +8,8 @@ namespace FieldKit
             try
             {
                 MethodInfo conditionChanged = AccessTools.Method(
-                    typeof(AbstractQuestControllerClass),
-                    nameof(AbstractQuestControllerClass
+                    typeof(QuestController),
+                    nameof(QuestController
                         .OnConditionChangedHandler));
                 if (conditionChanged == null)
                 {

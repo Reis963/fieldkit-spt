@@ -1,10 +1,8 @@
 
 namespace FieldKit
 {
-    [BepInPlugin(
-        "com.hysocs.fieldkit",
-        "Hysocs-FieldKit",
-        "1.2.0")]
+    [BepInPlugin("com.hysocs.fieldkit", "Hysocs-FieldKit", "1.3.0")]
+    [BepInDependency("com.SPT.core", "4.1.3")]
     public sealed partial class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource LogSource;
@@ -74,7 +72,6 @@ namespace FieldKit
         private GameWorld _world;
         private Player _localPlayer;
         private Camera _camera;
-
         private Canvas _canvas;
         private RectTransform _canvasRect;
         private BoxGraphic _boxGraphic;

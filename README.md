@@ -2,6 +2,8 @@
 
 FieldKit is a lightweight in-raid utility mod for SPT.
 
+This branch targets SPT 4.1.3.
+
 ## Features
 
 - Character health regeneration, hit punch, energy drain, and hydration drain
@@ -40,6 +42,10 @@ dotnet build FieldKit.sln -c Release -p:SkipDeploy=true
 
 `SkipDeploy=true` prevents the build from copying the client DLL into the
 configured SPT installation.
+
+Local compile-time DLLs are organized by category under `references/Bepinex`
+and `references/Tarkov`. These game-provided assemblies are referenced with
+copy-local disabled and are not part of the release package.
 
 ## License
 

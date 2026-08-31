@@ -158,8 +158,6 @@ namespace FieldKit
                 IsAlive = true
             };
 
-            AttachTargetHealthEvents(target);
-
             CacheBones(target);
             CachePlayerColliders(player, target.ColliderIds);
             player.OnIPlayerDeadOrUnspawn += OnPlayerRemoved;
@@ -183,20 +181,6 @@ namespace FieldKit
             }
         }
 
-        private static void AttachTargetHealthEvents(Target target)
-        {
-            if (target == null ||
-                target.HealthController == null ||
-                target.HealthChangedHandler != null)
-                return;
-
-            target.HealthChangedHandler =
-                (part, amount, damage) => target.HealthDirty = true;
-            target.HealthController.HealthChangedEvent +=
-                target.HealthChangedHandler;
-            target.HealthDirty = true;
-        }
-
         private void EnsureTargetRuntimeCache(Target target)
         {
             if (target == null || target.Player == null)
@@ -209,7 +193,7 @@ namespace FieldKit
             {
                 target.HealthController =
                     target.Player.HealthController;
-                AttachTargetHealthEvents(target);
+                target.HealthDirty = true;
             }
 
             float now = Time.unscaledTime;
@@ -279,13 +263,6 @@ namespace FieldKit
 
             if (target.Player != null)
                 target.Player.OnIPlayerDeadOrUnspawn -= OnPlayerRemoved;
-            if (target.HealthController != null &&
-                target.HealthChangedHandler != null)
-            {
-                target.HealthController.HealthChangedEvent -=
-                    target.HealthChangedHandler;
-            }
-
             target.IsAlive = false;
             _targets.RemoveAt(index);
         }
@@ -340,6 +317,12 @@ namespace FieldKit
                     now,
                     false);
                 target.DisplayColor = GetDisplayColor(target);
+
+                if (now >= target.NextHealthUpdate)
+                {
+                    target.NextHealthUpdate = now + 0.2f;
+                    target.HealthDirty = true;
+                }
 
                 if (target.HealthDirty)
                 {
