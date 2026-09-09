@@ -15,7 +15,7 @@ namespace FieldKit
             new ExperienceTrigger[0];
         private PlaceItemTrigger[] _questPlaceItemTriggers =
             new PlaceItemTrigger[0];
-        private string _questTriggerScene;
+        private bool _questStartupRefreshPending;
         private float _nextQuestTriggerRefresh;
         private float _nextQuestObjectiveRefresh;
         private bool _questObjectiveDataDirty = true;
@@ -123,7 +123,7 @@ namespace FieldKit
             if (!_questLocationHighlighting.Value)
                 return;
 
-            EnsureQuestTriggerCaches(scene);
+
             if (_questVisitLocations.Value)
             {
                 RefreshVisitLocationMarkers(
@@ -310,28 +310,24 @@ namespace FieldKit
             }
         }
 
-        private void EnsureQuestTriggerCaches(Scene scene)
+        private void RefreshQuestTriggerCaches()
         {
-            bool sceneChanged = !string.Equals(
-                    _questTriggerScene,
-                    scene.name,
-                    StringComparison.Ordinal);
-            bool missingRequestedTriggers =
-                (_questVisitLocations.Value &&
-                 _questExperienceTriggers.Length == 0) ||
-                (_questPlaceLocations.Value &&
-                 _questPlaceItemTriggers.Length == 0);
-            if (!sceneChanged &&
-                (!missingRequestedTriggers ||
-                 Time.unscaledTime < _nextQuestTriggerRefresh))
-                return;
-
-            _questTriggerScene = scene.name;
-            _nextQuestTriggerRefresh = Time.unscaledTime + 5f;
             _questExperienceTriggers =
                 Object.FindObjectsOfType<ExperienceTrigger>();
             _questPlaceItemTriggers =
                 Object.FindObjectsOfType<PlaceItemTrigger>();
+            InvalidateQuestObjectiveData();
+            _lastRenderFrame = -1;
+        }
+
+        private void UpdateQuestStartupRefresh()
+        {
+            if (!_questStartupRefreshPending || _world == null ||
+                Time.unscaledTime < _nextQuestTriggerRefresh)
+                return;
+
+            _questStartupRefreshPending = false;
+            RefreshQuestTriggerCaches();
         }
 
         private ExperienceTrigger FindExperienceTrigger(string id)
@@ -624,7 +620,7 @@ namespace FieldKit
             _questFindItemConditions.Clear();
             _questExperienceTriggers = new ExperienceTrigger[0];
             _questPlaceItemTriggers = new PlaceItemTrigger[0];
-            _questTriggerScene = null;
+            _questStartupRefreshPending = false;
             _nextQuestTriggerRefresh = 0f;
             _questObjectiveDataDirty = true;
             _nextQuestObjectiveRefresh = 0f;

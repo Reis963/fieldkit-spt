@@ -2,7 +2,7 @@
 namespace FieldKit
 {
     [BepInPlugin("com.hysocs.fieldkit", "Hysocs-FieldKit", "1.3.0")]
-    [BepInDependency("com.SPT.core", "4.1.3")]
+    [BepInDependency("com.SPT.core", "4.1.5")]
     public sealed partial class Plugin : BaseUnityPlugin
     {
         internal static ManualLogSource LogSource;

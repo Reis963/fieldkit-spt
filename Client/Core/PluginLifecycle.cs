@@ -130,6 +130,7 @@ namespace FieldKit
                 ClearOverlay();
 
             UpdateCharacterTools();
+            UpdateQuestStartupRefresh();
         }
 
         private void LateUpdate()

@@ -150,6 +150,12 @@ namespace FieldKit
             GUILayout.EndHorizontal();
             GUI.enabled = true;
 
+            GUI.enabled = _world != null && _localPlayer != null;
+            if (GUILayout.Button("Scan quest locations now"))
+                RefreshQuestTriggerCaches();
+            GUI.enabled = true;
+            GUILayout.Label("Scans at raid start and once after 5 seconds. Use this button for zones added later.");
+
             if (DrawResetGroupButton())
             {
                 _questLocationHighlighting.Value = false;
