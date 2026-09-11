@@ -283,7 +283,9 @@ namespace FieldKit
             {
                 Target target = _targets[i];
                 EnsureTargetRuntimeCache(target);
-                if (!ShouldShow(target))
+                if (!ShouldShow(target) || target.Root == null || _localPlayer == null ||
+                    (target.Root.position - _localPlayer.Transform.position).sqrMagnitude >
+                    _maxDistance.Value * _maxDistance.Value)
                 {
                     target.IsOnMainScreen = false;
                     target.HasVisibility = false;
@@ -314,8 +316,7 @@ namespace FieldKit
                 UpdateVisibility(
                     target,
                     ReferenceEquals(target, visibilityFocus),
-                    now,
-                    false);
+                    now);
                 target.DisplayColor = GetDisplayColor(target);
 
                 if (now >= target.NextHealthUpdate)

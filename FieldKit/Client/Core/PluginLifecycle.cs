@@ -17,7 +17,7 @@ namespace FieldKit
                 "Draw a box around each enabled ESP target.");
             _visibilityCheck = Config.Bind(
                 "ESP", "Visibility Check", true,
-                "Dim targets whose sampled bones are blocked by geometry.");
+                "Hide ESP beyond 25 m unless the head or chest is visible. Within 25 m, always show ESP. Max Distance applies in both cases.");
             _scopeEsp = Config.Bind(
                 "ESP", "Scope ESP", true,
                 "Render character ESP through magnified optic cameras.");

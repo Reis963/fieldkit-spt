@@ -553,12 +553,9 @@ namespace FieldKit
                             target,
                             overlay.Camera,
                             ReferenceEquals(target, scopeVisibilityFocus));
-                    Color hiddenScopeColor =
-                        GetRoleColor(target, true);
-                    Color scopeColor =
-                        scopeVisibleBones != BoneVisibility.None
-                            ? target.Color
-                            : hiddenScopeColor;
+                    if (scopeVisibleBones == BoneVisibility.None)
+                        continue;
+                    Color scopeColor = target.Color;
                     if (_showBoxes.Value)
                     {
                         overlay.Boxes.Add(new BoxCommand(

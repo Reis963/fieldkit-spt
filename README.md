@@ -2,7 +2,7 @@
 
 FieldKit is a lightweight in-raid utility mod for SPT.
 
-This branch targets SPT 4.1.3.
+This branch targets SPT 4.1.5.
 
 ## Features
 
@@ -42,6 +42,9 @@ dotnet build FieldKit.sln -c Release -p:SkipDeploy=true
 
 `SkipDeploy=true` prevents the build from copying the client DLL into the
 configured SPT installation.
+
+The project and client source are under `FieldKit/`. Release output is written
+to `FieldKit/bin/Release/netstandard2.1/`.
 
 Local compile-time DLLs are organized by category under `references/Bepinex`
 and `references/Tarkov`. These game-provided assemblies are referenced with

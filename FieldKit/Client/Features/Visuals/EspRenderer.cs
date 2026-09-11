@@ -99,6 +99,10 @@ namespace FieldKit
                     if (distanceSq > maxDistanceSq)
                         continue;
 
+                    if (_visibilityCheck.Value && distanceSq > 25f * 25f &&
+                        (!target.HasVisibility || !target.IsVisible))
+                        continue;
+
                     Rect rect;
 
                     if (!TryGetScreenRect(target, out rect))
@@ -116,7 +120,7 @@ namespace FieldKit
                     target.ScreenLayerFade = GetTargetScreenLayerFade(
                         target, rect, distanceSq, localPosition);
                     Color layeredColor = ApplyScreenLayerFade(
-                        target.DisplayColor,
+                        target.Color,
                         target.ScreenLayerFade);
                     if (_showBoxes.Value)
                         _boxes.Add(new BoxCommand(rect, layeredColor));
@@ -467,13 +471,26 @@ namespace FieldKit
             {
                 float centerX = (head.x + feet.x) * 0.5f;
                 float centerY = (head.y + feet.y) * 0.5f;
-                float visualHeight = Mathf.Max(2f, standingHeight);
+                Vector2 screenSpan = head - feet;
+                float projectedLength = screenSpan.magnitude;
+                if (float.IsNaN(projectedLength) || float.IsInfinity(projectedLength))
+                    return false;
+                float visualHeight = Mathf.Max(2f, projectedLength);
                 float halfWidth = Mathf.Max(1.5f, visualHeight * 0.22f);
+                // Bound the projected body axis and its perpendicular width.
+                // Camera roll changes both extents, not only the height.
+                Vector2 axis = projectedLength > 0.001f
+                    ? screenSpan / projectedLength
+                    : Vector2.up;
+                float extentX = Mathf.Abs(axis.x) * visualHeight * 0.5f +
+                    Mathf.Abs(axis.y) * halfWidth;
+                float extentY = Mathf.Abs(axis.y) * visualHeight * 0.5f +
+                    Mathf.Abs(axis.x) * halfWidth;
                 rect = Rect.MinMaxRect(
-                    centerX - halfWidth - padding,
-                    centerY - visualHeight * 0.5f - padding,
-                    centerX + halfWidth + padding,
-                    centerY + visualHeight * 0.5f + padding);
+                    centerX - extentX - padding,
+                    centerY - extentY - padding,
+                    centerX + extentX + padding,
+                    centerY + extentY + padding);
                 return true;
             }
 
@@ -673,9 +690,18 @@ namespace FieldKit
         private void UpdateVisibility(
             Target target,
             bool highPriority,
-            float now,
-            bool requirePerBone = false)
+            float now)
         {
+            if (target.Root == null || _localPlayer == null)
+                return;
+            float distanceSq = (target.Root.position -
+                _localPlayer.Transform.position).sqrMagnitude;
+            if (distanceSq > _maxDistance.Value * _maxDistance.Value || distanceSq <= 25f * 25f)
+            {
+                target.HasVisibility = false;
+                target.HasPerBoneVisibility = false;
+                return;
+            }
             if (!_visibilityCheck.Value)
             {
                 target.HasVisibility = false;
@@ -695,7 +721,7 @@ namespace FieldKit
                 highPriority != target.WasHighVisibilityPriority;
             target.WasHighVisibilityPriority = highPriority;
 
-            if (!priorityChanged &&
+            if (target.HasVisibility && !priorityChanged &&
                 now < target.NextVisibilityUpdate)
                 return;
 
@@ -708,47 +734,11 @@ namespace FieldKit
                 now + 1f / updateRate +
                 (target.Player.GetInstanceID() & 3) * 0.001f;
 
-            bool visible;
-
-            bool detailed = highPriority || requirePerBone;
-
-            if (!detailed)
-            {
-                visible =
-                    IsBoneVisible(target, target.Head, _camera) ||
-                    IsBoneVisible(target, target.Chest, _camera);
-            }
-            else
-            {
-                BoneVisibility mask = BoneVisibility.None;
-                SampleHead(target, target.Head, _camera, ref mask);
-                SampleBone(target, target.Neck, BoneVisibility.Neck, ref mask);
-                SampleBone(target, target.Chest, BoneVisibility.Chest, ref mask);
-                SampleBone(target, target.Pelvis, BoneVisibility.Pelvis, ref mask);
-                SampleBone(target, target.LeftShoulder, BoneVisibility.LeftShoulder, ref mask);
-                SampleBone(target, target.LeftElbow, BoneVisibility.LeftElbow, ref mask);
-                SampleBone(target, target.LeftHand, BoneVisibility.LeftHand, ref mask);
-                SampleBone(target, target.RightShoulder, BoneVisibility.RightShoulder, ref mask);
-                SampleBone(target, target.RightElbow, BoneVisibility.RightElbow, ref mask);
-                SampleBone(target, target.RightHand, BoneVisibility.RightHand, ref mask);
-                SampleBone(target, target.LeftHip, BoneVisibility.LeftHip, ref mask);
-                SampleBone(target, target.LeftKnee, BoneVisibility.LeftKnee, ref mask);
-                SampleBone(target, target.LeftFoot, BoneVisibility.LeftFoot, ref mask);
-                SampleBone(target, target.RightHip, BoneVisibility.RightHip, ref mask);
-                SampleBone(target, target.RightKnee, BoneVisibility.RightKnee, ref mask);
-                SampleBone(target, target.RightFoot, BoneVisibility.RightFoot, ref mask);
-                target.VisibleBones = mask;
-                target.HasPerBoneVisibility = true;
-                visible = mask != BoneVisibility.None;
-            }
-
-            if (!detailed)
-            {
-                target.HasPerBoneVisibility = false;
-                target.VisibleBones = BoneVisibility.None;
-            }
-
-            target.IsVisible = visible;
+            target.IsVisible =
+                IsBoneVisible(target, target.Head, _camera) ||
+                IsBoneVisible(target, target.Chest, _camera);
+            target.HasPerBoneVisibility = false;
+            target.VisibleBones = BoneVisibility.None;
             target.HasVisibility = true;
         }
 
@@ -790,44 +780,6 @@ namespace FieldKit
 
             if (next < distance)
                 distance = next;
-        }
-
-        private void SampleBone(
-            Target target,
-            Transform bone,
-            BoneVisibility flag,
-            ref BoneVisibility mask)
-        {
-            SampleBone(target, bone, flag, _camera, ref mask);
-        }
-
-        private void SampleBone(
-            Target target,
-            Transform bone,
-            BoneVisibility flag,
-            Camera camera,
-            ref BoneVisibility mask)
-        {
-            if (IsBoneVisible(target, bone, camera))
-                mask |= flag;
-        }
-
-        private void SampleHead(
-            Target target,
-            Transform head,
-            Camera camera,
-            ref BoneVisibility mask)
-        {
-            if (head == null || camera == null)
-                return;
-
-            Vector3 center = head.position;
-            Vector3 cameraRight = camera.transform.right * 0.09f;
-            if (IsPointVisible(target, center, camera) ||
-                IsPointVisible(target, center + Vector3.up * 0.12f, camera) ||
-                IsPointVisible(target, center + cameraRight, camera) ||
-                IsPointVisible(target, center - cameraRight, camera))
-                mask |= BoneVisibility.Head;
         }
 
         private bool IsBoneVisible(
@@ -909,8 +861,17 @@ namespace FieldKit
             Camera visibilityCamera,
             bool detailed)
         {
-            if (!_visibilityCheck.Value)
+            if (target.Root == null || _localPlayer == null)
+                return BoneVisibility.None;
+            float distanceSq = (target.Root.position -
+                _localPlayer.Transform.position).sqrMagnitude;
+            if (distanceSq > _maxDistance.Value * _maxDistance.Value)
+                return BoneVisibility.None;
+            if (!_visibilityCheck.Value || distanceSq <= 25f * 25f)
+            {
+                target.NextScopeVisibilityUpdate = 0f;
                 return (BoneVisibility)(-1);
+            }
             if (visibilityCamera == null ||
                 !EnsureBones(target))
                 return BoneVisibility.None;
@@ -922,32 +883,11 @@ namespace FieldKit
                 now < target.NextScopeVisibilityUpdate)
                 return target.ScopeVisibleBones;
 
-            BoneVisibility mask = BoneVisibility.None;
-            if (detailed)
-            {
-                SampleHead(target, target.Head, visibilityCamera, ref mask);
-                SampleBone(target, target.Neck, BoneVisibility.Neck, visibilityCamera, ref mask);
-                SampleBone(target, target.Chest, BoneVisibility.Chest, visibilityCamera, ref mask);
-                SampleBone(target, target.Pelvis, BoneVisibility.Pelvis, visibilityCamera, ref mask);
-                SampleBone(target, target.LeftShoulder, BoneVisibility.LeftShoulder, visibilityCamera, ref mask);
-                SampleBone(target, target.LeftElbow, BoneVisibility.LeftElbow, visibilityCamera, ref mask);
-                SampleBone(target, target.LeftHand, BoneVisibility.LeftHand, visibilityCamera, ref mask);
-                SampleBone(target, target.RightShoulder, BoneVisibility.RightShoulder, visibilityCamera, ref mask);
-                SampleBone(target, target.RightElbow, BoneVisibility.RightElbow, visibilityCamera, ref mask);
-                SampleBone(target, target.RightHand, BoneVisibility.RightHand, visibilityCamera, ref mask);
-                SampleBone(target, target.LeftHip, BoneVisibility.LeftHip, visibilityCamera, ref mask);
-                SampleBone(target, target.LeftKnee, BoneVisibility.LeftKnee, visibilityCamera, ref mask);
-                SampleBone(target, target.LeftFoot, BoneVisibility.LeftFoot, visibilityCamera, ref mask);
-                SampleBone(target, target.RightHip, BoneVisibility.RightHip, visibilityCamera, ref mask);
-                SampleBone(target, target.RightKnee, BoneVisibility.RightKnee, visibilityCamera, ref mask);
-                SampleBone(target, target.RightFoot, BoneVisibility.RightFoot, visibilityCamera, ref mask);
-            }
-            else
-            {
-                SampleBone(target, target.Head, BoneVisibility.Head, visibilityCamera, ref mask);
-                SampleBone(target, target.Chest, BoneVisibility.Chest, visibilityCamera, ref mask);
-            }
-
+            BoneVisibility mask =
+                IsBoneVisible(target, target.Head, visibilityCamera) ||
+                IsBoneVisible(target, target.Chest, visibilityCamera)
+                    ? BoneVisibility.Head | BoneVisibility.Chest
+                    : BoneVisibility.None;
             target.ScopeVisibleBones = mask;
             target.ScopeVisibilityCameraId = cameraId;
             target.ScopeVisibilityDetailed = detailed;

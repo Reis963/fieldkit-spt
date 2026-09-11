@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
@@ -18,8 +18,8 @@
     <DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
     <FieldKitForceRebuildDir>$(MSBuildProjectDirectory)\obj\$(Configuration)\$(TargetFramework)</FieldKitForceRebuildDir>
     <FieldKitForceRebuildFile>$(FieldKitForceRebuildDir)\FieldKit.ForceRebuild.g.cs</FieldKitForceRebuildFile>
-    <FieldKitBepInExReferenceRoot>$(MSBuildProjectDirectory)\references\Bepinex</FieldKitBepInExReferenceRoot>
-    <FieldKitTarkovReferenceRoot>$(MSBuildProjectDirectory)\references\Tarkov</FieldKitTarkovReferenceRoot>
+    <FieldKitBepInExReferenceRoot>$(MSBuildProjectDirectory)\..\references\Bepinex</FieldKitBepInExReferenceRoot>
+    <FieldKitTarkovReferenceRoot>$(MSBuildProjectDirectory)\..\references\Tarkov</FieldKitTarkovReferenceRoot>
   </PropertyGroup>
 
   <ItemDefinitionGroup>
@@ -30,8 +30,8 @@
 
   <ItemGroup>
     <Compile Include="$(FieldKitForceRebuildFile)" AutoGen="true" DesignTime="false" Visible="false" />
-    <EmbeddedResource Include="THIRD_PARTY_NOTICES.md" />
-    <None Update="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="..\THIRD_PARTY_NOTICES.md" LogicalName="FieldKit.THIRD_PARTY_NOTICES.md" />
+    <None Include="..\THIRD_PARTY_NOTICES.md" Link="THIRD_PARTY_NOTICES.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -102,13 +102,13 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <FieldKitClientInstallDir>$(MSBuildProjectDirectory)\..\..\BepInEx\plugins\Hysocs-FieldKit</FieldKitClientInstallDir>
+    <FieldKitClientInstallDir>$(MSBuildProjectDirectory)\..\..\..\BepInEx\plugins\Hysocs-FieldKit</FieldKitClientInstallDir>
   </PropertyGroup>
 
   <Target Name="DeployFieldKitClient" AfterTargets="Build" Condition="'$(SkipDeploy)' != 'true'">
     <MakeDir Directories="$(FieldKitClientInstallDir)" />
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(FieldKitClientInstallDir)" SkipUnchangedFiles="false" />
-    <Copy SourceFiles="$(MSBuildProjectDirectory)\THIRD_PARTY_NOTICES.md" DestinationFolder="$(FieldKitClientInstallDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MSBuildProjectDirectory)\..\THIRD_PARTY_NOTICES.md" DestinationFolder="$(FieldKitClientInstallDir)" SkipUnchangedFiles="true" />
     <Message Importance="high" Text="FieldKit client deployed: $(FieldKitClientInstallDir)\$(TargetFileName)" />
   </Target>
 
