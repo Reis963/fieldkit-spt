@@ -6,7 +6,7 @@ This branch targets SPT 4.1.5.
 
 ## Features
 
-- Character health regeneration, hit punch, energy drain, and hydration drain
+- Character health regeneration, energy drain, and hydration drain
 - Character box ESP with visibility checking, configurable target information,
   and magnified-optic projection
 - Active-quest highlighting for required items, visit objectives, and

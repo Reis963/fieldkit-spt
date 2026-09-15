@@ -8,62 +8,6 @@ namespace FieldKit
             {
                 _harmony.Patch(
                     AccessTools.Method(
-                        typeof(HitCameraShaker),
-                        nameof(HitCameraShaker.Hit)),
-                    prefix: new HarmonyMethod(
-                        AccessTools.Method(
-                            typeof(Plugin),
-                            nameof(ScaleVisualHitPunch))));
-
-                MethodInfo damageReactionMethod =
-                    AccessTools.Method(
-                        typeof(EffectsController),
-                        nameof(EffectsController.OnPlayerDamaged),
-                        new[]
-                        {
-                            typeof(float),
-                            typeof(EBodyPart),
-                            typeof(EDamageType),
-                            typeof(float),
-                            typeof(EFT.Ballistics.MaterialType)
-                        });
-                MethodInfo damageForceMethod =
-                    AccessTools.Method(
-                        typeof(ForceEffector),
-                        nameof(ForceEffector.AddForce),
-                        new[]
-                        {
-                            typeof(float),
-                            typeof(float),
-                            typeof(float)
-                        });
-
-                if (damageReactionMethod != null)
-                {
-                    _harmony.Patch(
-                        damageReactionMethod,
-                        prefix: new HarmonyMethod(
-                            AccessTools.Method(
-                                typeof(Plugin),
-                                nameof(BeginVisualDamageReaction))),
-                        postfix: new HarmonyMethod(
-                            AccessTools.Method(
-                                typeof(Plugin),
-                                nameof(EndVisualDamageReaction))));
-                }
-
-                if (damageForceMethod != null)
-                {
-                    _harmony.Patch(
-                        damageForceMethod,
-                        prefix: new HarmonyMethod(
-                            AccessTools.Method(
-                                typeof(Plugin),
-                                nameof(ScaleVisualDamageCameraForce))));
-                }
-
-                _harmony.Patch(
-                    AccessTools.Method(
                         typeof(ActiveHealthController),
                         nameof(ActiveHealthController.ChangeEnergy)),
                     prefix: new HarmonyMethod(

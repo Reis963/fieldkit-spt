@@ -10,24 +10,17 @@ namespace FieldKit
 
             BeginCategoryColumns();
 
-            BeginCategoryPanel("Health & Reactions");
+            BeginCategoryPanel("Health");
             DrawOptionSlider(
                 "Health regeneration",
                 _healthRegeneration,
                 0f,
                 25f,
                 "0.0 HP/s");
-            DrawOptionSlider(
-                "Hit punch",
-                _visualHitPunchAmount,
-                0f,
-                1f,
-                "P0");
 
             if (DrawResetGroupButton())
             {
                 _healthRegeneration.Value = 0f;
-                _visualHitPunchAmount.Value = 1f;
             }
             EndCategoryPanel();
 
